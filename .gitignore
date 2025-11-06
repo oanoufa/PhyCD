@@ -1,0 +1,21 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[codz]
+*$py.class
+
+# R folder
+Rlibs/
+
+# Access project
+security_side_project/
+
+# Hidden folders
+.snakemake/
+.venv/
+.vscode/
+
+# figs
+figs/
+
+# data
+data/
