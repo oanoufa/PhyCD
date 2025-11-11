@@ -12,6 +12,7 @@ from functools import partial
 import pickle
 
 data_dir = _params.data_dir
+samples_dir = _params.samples_dir
 n_batch = _params.n_batch
 het_thr = _params.het_thr
 depth_thr = _params.depth_thr
@@ -27,8 +28,7 @@ masking_ratio = _params.masking_ratio
 param_term = _params.param_term
 num_cores = _params.num_cores
 masking_method = _params.masking_method
-
-
+param_path = _params.param_path
 
 
 def build_mut_dict(maple_file):
@@ -110,6 +110,8 @@ if __name__ == "__main__":
                                                 
     # Access the total median cat list and add the results to the file
     final_mut_path = Path(f"{data_dir}/2/n_masked_and_masked_mut/masked_mut_{param_term}.tsv")
+    # Generate the parent directory if it doesn't exist
+    final_mut_path.parent.mkdir(parents=True, exist_ok=True)
 
     final_mut_tsv = pd.DataFrame(columns=["sample_name", "masked_mutations_masked", "masked_mutations_random"])
 
@@ -133,6 +135,8 @@ if __name__ == "__main__":
     maple_alignment_unmasked_file_path = f"{data_dir}/2/alignment_files/unmasked_alignment_{param_term}.maple"
     maple_alignment_random_file_path = f"{data_dir}/2/alignment_files/random_alignment_{param_term}.maple"
     maple_alignment_masked_file_path = f"{data_dir}/2/alignment_files/masked_alignment_{param_term}.maple"
+    # Generate parent directory if it doesn't exist
+    Path(final_clean_tree_path).parent.mkdir(parents=True, exist_ok=True)
     build_maple_file(path_ref_seq, maple_alignment_unmasked_file_path)
     build_maple_file(path_ref_seq, maple_alignment_random_file_path)
     build_maple_file(path_ref_seq, maple_alignment_masked_file_path)
@@ -231,7 +235,7 @@ if __name__ == "__main__":
         next(f) # Skip the first two lines (reference sequence)
         clean_tree_content = f.read().encode()
 
-    align_files = list(batches_folder_path.glob(f"maple_alignment_{masking_method}_batch*_{param_term}.maple"))
+    align_files = list(batches_folder_path.glob(f"maple_alignment_batch*_{param_term}.maple"))
     print(f"Appending clean samples to {len(align_files)} alignment files using {num_cores} CPU cores...")
 
     with Pool(processes=num_cores) as pool:
@@ -265,6 +269,9 @@ if __name__ == "__main__":
             break        
     
     # Save the variant:mutation dictionary to a pickle file
+    # Create dict folder if it doesn't exist
+    dict_folder = Path(f"{data_dir}/2/dict/")
+    dict_folder.mkdir(parents=True, exist_ok=True)
     dict_path = f"{data_dir}/2/dict/clean_samples_var_to_mut_dict_{param_term}.pickle"
     with open(dict_path, "wb") as f:
         pickle.dump(var_mut_dict, f)
@@ -275,3 +282,20 @@ if __name__ == "__main__":
         pickle.dump(mut_to_variant_dict, f)
     print(f"Mutation to variant dictionary saved to {inv_dict_path}.")
     
+    # Save input alignment to param
+    updates = {
+        "maple_alignment_unmasked_file_path": maple_alignment_unmasked_file_path,
+        "maple_alignment_random_file_path": maple_alignment_random_file_path,
+        "maple_alignment_masked_file_path": maple_alignment_masked_file_path,
+        "final_clean_tree_path": final_clean_tree_path
+    }
+    
+    update_params_file(param_path, updates)
+    
+    generate_sh_param_file(param_path.replace(".py", ".sh"))
+    
+    
+    # Save done file
+    done_file_path = Path(f"{data_dir}/done_files/2_process_gmf_output.done")
+    done_file_path.parent.mkdir(parents=True, exist_ok=True)
+    done_file_path.touch()

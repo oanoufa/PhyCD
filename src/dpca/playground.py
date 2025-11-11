@@ -347,34 +347,46 @@ if __name__ == "__main__":
     # OPEN /nfs/research/goldman/anoufa/data/MAPLE_output/processed_placements/processed_placements_results_with_contaminants_random_0.1_3.4.tsv
     # CHECK WHY ITS 630Mb instead of the usual ~8Mb
     
-    pd.set_option('display.max_columns', None)
-    pd.set_option('display.expand_frame_repr', False)
+    # pd.set_option('display.max_columns', None)
+    # pd.set_option('display.expand_frame_repr', False)
 
-    paths_df = [Path("/nfs/research/goldman/anoufa/data/MAPLE_output/processed_placements/processed_placements_results_with_contaminants_random_0.1_3.4.tsv"),
-                Path("/nfs/research/goldman/anoufa/data/MAPLE_output/processed_placements/processed_placements_results_with_contaminants_masked_0.1_3.15.tsv")]
+    # paths_df = [Path("/nfs/research/goldman/anoufa/data/MAPLE_output/processed_placements/processed_placements_results_with_contaminants_random_0.1_3.4.tsv"),
+    #             Path("/nfs/research/goldman/anoufa/data/MAPLE_output/processed_placements/processed_placements_results_with_contaminants_masked_0.1_3.15.tsv")]
     
-    for path_df in paths_df:
-        print(f"Processing {path_df}")
-        df_pp = pd.read_csv(path_df, sep="\t")
+    # for path_df in paths_df:
+    #     print(f"Processing {path_df}")
+    #     df_pp = pd.read_csv(path_df, sep="\t")
 
-        # Print head FULL
-        print(df_pp.head(5))
-        print(df_pp.shape)
+    #     # Print head FULL
+    #     print(df_pp.head(5))
+    #     print(df_pp.shape)
         
-        # statistics on the df (min max mean closeness, closeness_ratio, n_candidates)
-        print("Closeness statistics:")
-        print(f"Min closeness: {df_pp['closeness'].min()}")
-        print(f"Max closeness: {df_pp['closeness'].max()}")
-        print(f"Mean closeness: {df_pp['closeness'].mean()}")
-        print(f"Min closeness ratio: {df_pp['closeness_ratio'].min()}")
-        print(f"Max closeness ratio: {df_pp['closeness_ratio'].max()}")
-        print(f"Mean closeness ratio: {df_pp['closeness_ratio'].mean()}")
-        print(f"Min n_candidates: {df_pp['n_candidates'].min()}")
-        print(f"Max n_candidates: {df_pp['n_candidates'].max()}")
-        print(f"Mean n_candidates: {df_pp['n_candidates'].mean()}")
+    #     # statistics on the df (min max mean closeness, closeness_ratio, n_candidates)
+    #     print("Closeness statistics:")
+    #     print(f"Min closeness: {df_pp['closeness'].min()}")
+    #     print(f"Max closeness: {df_pp['closeness'].max()}")
+    #     print(f"Mean closeness: {df_pp['closeness'].mean()}")
+    #     print(f"Min closeness ratio: {df_pp['closeness_ratio'].min()}")
+    #     print(f"Max closeness ratio: {df_pp['closeness_ratio'].max()}")
+    #     print(f"Mean closeness ratio: {df_pp['closeness_ratio'].mean()}")
+    #     print(f"Min n_candidates: {df_pp['n_candidates'].min()}")
+    #     print(f"Max n_candidates: {df_pp['n_candidates'].max()}")
+    #     print(f"Mean n_candidates: {df_pp['n_candidates'].mean()}")
         
-        # Show row with max n_candidates
-        max_n_candidates = df_pp['n_candidates'].max()
-        print("Row(s) with max n_candidates:")
-        print(len(df_pp[df_pp['n_candidates'] == max_n_candidates]['closest_variant'].values[0].split(";")))
-        print("\n\n")
+    #     # Show row with max n_candidates
+    #     max_n_candidates = df_pp['n_candidates'].max()
+    #     print("Row(s) with max n_candidates:")
+    #     print(len(df_pp[df_pp['n_candidates'] == max_n_candidates]['closest_variant'].values[0].split(";")))
+    #     print("\n\n")
+    
+    path = "/nfs/research/goldman/anoufa/pipeline/run2viridian_dir.tsv.xz"
+
+    # open path and create the file with the first 100000 samples
+    n_samples = 50000
+    with lzma.open(path, "rt") as f_in, lzma.open(f"/nfs/research/goldman/anoufa/pipeline/run2viridian_dir_{n_samples}.tsv.xz", "wt") as f_out:
+        for i, line in enumerate(f_in):
+            if i <= n_samples:
+                f_out.write(line)
+            else:
+                break
+    

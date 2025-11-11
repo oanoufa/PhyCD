@@ -34,6 +34,8 @@ args = parser.parse_args()
 # Get the arguments
 masked_or_random = args.masked_or_random
 
+param_path = _params.param_path
+data_dir = _params.data_dir
 n_batch = _params.n_batch
 het_thr = _params.het_thr
 depth_thr = _params.depth_thr
@@ -97,7 +99,7 @@ def build_maple_vcf_dict(clean_file_path, param_term, masked_or_random):
             else:
                 line = file.readline().strip()
 
-    alignment_folder = Path("/nfs/research/goldman/anoufa/data/MAPLE_input/alignment_files/")
+    alignment_folder = Path(f"{data_dir}/2/alignment_files/")
     print(f"Adding unmasked and {masked_or_random} entries...")
     for alignment_file in tqdm(
         alignment_folder.glob(f"*_alignment_{param_term}.maple"),
@@ -269,193 +271,193 @@ def heterozygosity_score(sample_name, cont_seq):
         print(f"Sample: {sample_name}, Het score: {het_score:.4f}, Het sites: {len(het_sites)}", flush=True)
     return het_score
 
-def look_for_closest_variant_optimized(
-    input_tsv,
-    output_tsv,
-    mutation_col_name,
-    masked_or_random,
-    ref_seq,
-):
-    """
-    Iterate over the input TSV file, for each sample find the closest variants in the clean tree
-    based on the mutations present in the sample and the mutations associated with each variant.
-    On those closest variants, compute the hamming distance to the unmasked sequence at the masked regions.
-    Write the results to the output TSV file with additional columns:
-    - closest_variant: the name(s) of the closest variant(s) in the clean tree
-    - n_candidates: number of candidate variants with the highest closeness score
-    - closeness: the highest closeness score (number of shared mutations)
-    - closeness_ratio: closeness / number of mutations in the sample
-    - hamming_dist: the best hamming distance (proportion of matches) among the closest variants
-    """
+# def look_for_closest_variant_optimized(
+#     input_tsv,
+#     output_tsv,
+#     mutation_col_name,
+#     masked_or_random,
+#     ref_seq,
+# ):
+#     """
+#     Iterate over the input TSV file, for each sample find the closest variants in the clean tree
+#     based on the mutations present in the sample and the mutations associated with each variant.
+#     On those closest variants, compute the hamming distance to the unmasked sequence at the masked regions.
+#     Write the results to the output TSV file with additional columns:
+#     - closest_variant: the name(s) of the closest variant(s) in the clean tree
+#     - n_candidates: number of candidate variants with the highest closeness score
+#     - closeness: the highest closeness score (number of shared mutations)
+#     - closeness_ratio: closeness / number of mutations in the sample
+#     - hamming_dist: the best hamming distance (proportion of matches) among the closest variants
+#     """
 
-    print(f"[PID {os.getpid()}] Worker started with {input_tsv}", flush=True)
-    # LOAD THE DICTIONARIES
-    print(f"[PID {os.getpid()}] Loaded mutation to variants dictionary with {len(mutation_to_variants)} mutations.", flush=True)
-    print(f"[PID {os.getpid()}] Loaded MAPLE VCF dictionary with {len(maple_vcf_dict)} entries.", flush=True)
+#     print(f"[PID {os.getpid()}] Worker started with {input_tsv}", flush=True)
+#     # LOAD THE DICTIONARIES
+#     print(f"[PID {os.getpid()}] Loaded mutation to variants dictionary with {len(mutation_to_variants)} mutations.", flush=True)
+#     print(f"[PID {os.getpid()}] Loaded MAPLE VCF dictionary with {len(maple_vcf_dict)} entries.", flush=True)
     
-    # Main processing
-    with open(input_tsv, "r") as f_in, open(output_tsv, "w", newline="") as f_out:
-        reader = csv.reader(f_in, delimiter="\t")
-        writer = csv.writer(f_out, delimiter="\t")
+#     # Main processing
+#     with open(input_tsv, "r") as f_in, open(output_tsv, "w", newline="") as f_out:
+#         reader = csv.reader(f_in, delimiter="\t")
+#         writer = csv.writer(f_out, delimiter="\t")
 
-        # Write new header
-        header = next(reader)
-        sample_idx = header.index("sample_name")
-        mutation_idx = header.index(mutation_col_name)
+#         # Write new header
+#         header = next(reader)
+#         sample_idx = header.index("sample_name")
+#         mutation_idx = header.index(mutation_col_name)
 
-        # Prepare output header
-        new_header = header + [
-            "closest_variant",
-            "n_candidates",
-            "closeness",
-            "closeness_ratio",
-            "matching_score",
-        ]
+#         # Prepare output header
+#         new_header = header + [
+#             "closest_variant",
+#             "n_candidates",
+#             "closeness",
+#             "closeness_ratio",
+#             "matching_score",
+#         ]
 
-        writer.writerow(new_header)
+#         writer.writerow(new_header)
 
-        for cols in tqdm(reader, desc=f"[PID {os.getpid()}] Processing samples", mininterval=120):
-            sample_name = cols[sample_idx]
-            sample_mut = cols[mutation_idx]
+#         for cols in tqdm(reader, desc=f"[PID {os.getpid()}] Processing samples", mininterval=120):
+#             sample_name = cols[sample_idx]
+#             sample_mut = cols[mutation_idx]
 
-            # Default output values
-            closest_variant = "No mutations masked by gen_maple_file"
-            n_candidates = 0
-            closeness = 0
-            closeness_ratio = 0
-            het_score = 0
-            matching_score = -1
-            mismatches = -1
+#             # Default output values
+#             closest_variant = "No mutations masked by gen_maple_file"
+#             n_candidates = 0
+#             closeness = 0
+#             closeness_ratio = 0
+#             het_score = 0
+#             matching_score = -1
+#             mismatches = -1
 
-            if sample_mut:
-                # Expand mutations masked by gen_maple_file
-                sample_mut = set(sample_mut.split(";"))
-                expanded_mut_set = set()
-                for mut in sample_mut:
-                    expanded_mut_set.update(expand_ambiguous_mutation(mut, remove_starting_nt=True))
-                # Add heterozygous sites to the expanded mutation set
-                het_sites = het_sites_dict.get(sample_name, [])
-                het_sites_set = set()
-                for pos, minor_allele, _ in het_sites:
-                    het_mut = f"{pos}{minor_allele}".upper()
-                    het_sites_set.update(het_mut)
-                expanded_mut_set.update(het_sites_set)
+#             if sample_mut:
+#                 # Expand mutations masked by gen_maple_file
+#                 sample_mut = set(sample_mut.split(";"))
+#                 expanded_mut_set = set()
+#                 for mut in sample_mut:
+#                     expanded_mut_set.update(expand_ambiguous_mutation(mut, remove_starting_nt=True))
+#                 # Add heterozygous sites to the expanded mutation set
+#                 het_sites = het_sites_dict.get(sample_name, [])
+#                 het_sites_set = set()
+#                 for pos, minor_allele, _ in het_sites:
+#                     het_mut = f"{pos}{minor_allele}".upper()
+#                     het_sites_set.update(het_mut)
+#                 expanded_mut_set.update(het_sites_set)
                 
 
-                # Find candidate variants
-                candidate_counts = Counter()
-                for mut in expanded_mut_set:
-                    candidate_counts.update(mutation_to_variants.get(mut, []))
+#                 # Find candidate variants
+#                 candidate_counts = Counter()
+#                 for mut in expanded_mut_set:
+#                     candidate_counts.update(mutation_to_variants.get(mut, []))
 
-                if candidate_counts:
-                    max_closeness = max(candidate_counts.values())
-                    best_variants = [
-                        v
-                        for v, count in candidate_counts.items()
-                        if count == max_closeness
-                    ]
+#                 if candidate_counts:
+#                     max_closeness = max(candidate_counts.values())
+#                     best_variants = [
+#                         v
+#                         for v, count in candidate_counts.items()
+#                         if count == max_closeness
+#                     ]
 
-                    # Compute masked regions
-                    maple_entry_unmasked = maple_vcf_dict.get(
-                        (sample_name, "unmasked"), []
-                    )  # UNMASKED ENTRY
-                    maple_entry_masked = maple_vcf_dict.get(
-                        (sample_name, masked_or_random), []
-                    )  # MASKED OR RANDOM ENTRY
+#                     # Compute masked regions
+#                     maple_entry_unmasked = maple_vcf_dict.get(
+#                         (sample_name, "unmasked"), []
+#                     )  # UNMASKED ENTRY
+#                     maple_entry_masked = maple_vcf_dict.get(
+#                         (sample_name, masked_or_random), []
+#                     )  # MASKED OR RANDOM ENTRY
 
-                    masked_regions_masked = parse_intervals(
-                        maple_entry_masked
-                    )  # MASKED REGIONS IN THE MASKED OR RANDOM ENTRY
-                    masked_regions_unmasked = parse_intervals(
-                        maple_entry_unmasked
-                    )  # MASKED REGIONS IN THE UNMASKED (VIRIDIAN) ENTRY
-                    masked_regions_alg = subtract_intervals(
-                        masked_regions_masked, masked_regions_unmasked
-                    )  # REGIONS MASKED BY OUR PROCESS ONLY
+#                     masked_regions_masked = parse_intervals(
+#                         maple_entry_masked
+#                     )  # MASKED REGIONS IN THE MASKED OR RANDOM ENTRY
+#                     masked_regions_unmasked = parse_intervals(
+#                         maple_entry_unmasked
+#                     )  # MASKED REGIONS IN THE UNMASKED (VIRIDIAN) ENTRY
+#                     masked_regions_alg = subtract_intervals(
+#                         masked_regions_masked, masked_regions_unmasked
+#                     )  # REGIONS MASKED BY OUR PROCESS ONLY
 
-                    # Build inverse sequence that contains only the masked regions 
-                    viridian_seq = ref_seq.copy()
-                    for mut in parse_mutations(maple_entry_unmasked):
-                        if len(mut) == 3:
-                            base, pos, length = mut
-                            viridian_seq[pos - 1 : pos - 1 + length] = [base] * length
-                        else:
-                            base, pos = mut
-                            viridian_seq[pos - 1] = base
-                    # THE SEQUENCE IS NOW IDENTICAL TO THE UNMASKED SEQUENCE
-                    # Build auxiliary sequence for masked regions
-                    aux_viridian_seq = "".join(
-                        "".join(viridian_seq[start - 1 : end])
-                        for start, end in masked_regions_alg
-                    )  # FIRST JOIN TO GET THE CONTIGS THEN JOIN THE CONTIGS
+#                     # Build inverse sequence that contains only the masked regions 
+#                     viridian_seq = ref_seq.copy()
+#                     for mut in parse_mutations(maple_entry_unmasked):
+#                         if len(mut) == 3:
+#                             base, pos, length = mut
+#                             viridian_seq[pos - 1 : pos - 1 + length] = [base] * length
+#                         else:
+#                             base, pos = mut
+#                             viridian_seq[pos - 1] = base
+#                     # THE SEQUENCE IS NOW IDENTICAL TO THE UNMASKED SEQUENCE
+#                     # Build auxiliary sequence for masked regions
+#                     aux_viridian_seq = "".join(
+#                         "".join(viridian_seq[start - 1 : end])
+#                         for start, end in masked_regions_alg
+#                     )  # FIRST JOIN TO GET THE CONTIGS THEN JOIN THE CONTIGS
 
-                    # Compare candidates
-                    best_contaminant_score = -1
-                    # THE SCORE CORRESPONDS TO THE PROPORTION OF MATCHES (matches / length)
-                    best_contaminant = ""
+#                     # Compare candidates
+#                     best_contaminant_score = -1
+#                     # THE SCORE CORRESPONDS TO THE PROPORTION OF MATCHES (matches / length)
+#                     best_contaminant = ""
 
-                    # Downsample best_variants to at most 100 if too many
-                    if len(best_variants) > 100:
-                        variants_to_consider = random.sample(best_variants, 100)
-                    else:
-                        variants_to_consider = best_variants
-                    # For each of those (up to 100 candidates), we retrieve their sequence at the masked regions and compute the hamming distance to check how it matches the unmasked sequence
-                    for cont_name in variants_to_consider:
-                        maple_entry_cont = maple_vcf_dict.get(
-                            (cont_name, "clean"), []
-                        )  # CONTAMINANT ENTRY IN THE CLEAN TREE
-                        cont_seq = ref_seq.copy()
-                        for mut in parse_mutations(maple_entry_cont):
-                            if len(mut) == 3:
-                                base, pos, length = mut
-                                cont_seq[pos - 1 : pos - 1 + length] = [base] * length
-                            else:
-                                base, pos = mut
-                                cont_seq[pos - 1] = base
+#                     # Downsample best_variants to at most 100 if too many
+#                     if len(best_variants) > 100:
+#                         variants_to_consider = random.sample(best_variants, 100)
+#                     else:
+#                         variants_to_consider = best_variants
+#                     # For each of those (up to 100 candidates), we retrieve their sequence at the masked regions and compute the hamming distance to check how it matches the unmasked sequence
+#                     for cont_name in variants_to_consider:
+#                         maple_entry_cont = maple_vcf_dict.get(
+#                             (cont_name, "clean"), []
+#                         )  # CONTAMINANT ENTRY IN THE CLEAN TREE
+#                         cont_seq = ref_seq.copy()
+#                         for mut in parse_mutations(maple_entry_cont):
+#                             if len(mut) == 3:
+#                                 base, pos, length = mut
+#                                 cont_seq[pos - 1 : pos - 1 + length] = [base] * length
+#                             else:
+#                                 base, pos = mut
+#                                 cont_seq[pos - 1] = base
                         
 
-                        aux_cont_seq = "".join(
-                            "".join(cont_seq[start - 1 : end])
-                            for start, end in masked_regions_alg
-                        )
+#                         aux_cont_seq = "".join(
+#                             "".join(cont_seq[start - 1 : end])
+#                             for start, end in masked_regions_alg
+#                         )
 
-                        hamming_score, n_mismatches = generalized_hamming(
-                            aux_viridian_seq, aux_cont_seq, sample_name, cont_name
-                        )
+#                         hamming_score, n_mismatches = generalized_hamming(
+#                             aux_viridian_seq, aux_cont_seq, sample_name, cont_name
+#                         )
 
-                        het_score = heterozygosity_score(sample_name, cont_seq)
+#                         het_score = heterozygosity_score(sample_name, cont_seq)
 
-                        curr_score = (hamming_score + het_score)/2  # AVERAGE OF HAMMING SCORE AND HET SCORE
+#                         curr_score = (hamming_score + het_score)/2  # AVERAGE OF HAMMING SCORE AND HET SCORE
 
-                        if curr_score > best_contaminant_score:
-                            best_contaminant_score = curr_score
-                            best_het_score = het_score
-                            min_mismatches = n_mismatches
-                            best_contaminant = cont_name
-                        # HANDLE TIES
-                        elif curr_score == best_contaminant_score:
-                            best_contaminant += f";{cont_name}"
+#                         if curr_score > best_contaminant_score:
+#                             best_contaminant_score = curr_score
+#                             best_het_score = het_score
+#                             min_mismatches = n_mismatches
+#                             best_contaminant = cont_name
+#                         # HANDLE TIES
+#                         elif curr_score == best_contaminant_score:
+#                             best_contaminant += f";{cont_name}"
 
-                    # Save computed values
-                    closest_variant = best_contaminant
-                    n_candidates = len(best_variants)
-                    closeness = max_closeness
-                    closeness_ratio = max_closeness / len(sample_mut)
-                    matching_score = best_contaminant_score
-                    mismatches = min_mismatches
+#                     # Save computed values
+#                     closest_variant = best_contaminant
+#                     n_candidates = len(best_variants)
+#                     closeness = max_closeness
+#                     closeness_ratio = max_closeness / len(sample_mut)
+#                     matching_score = best_contaminant_score
+#                     mismatches = min_mismatches
 
-            # Write updated row
-            writer.writerow(
-                cols
-                + [
-                    closest_variant,
-                    n_candidates,
-                    closeness,
-                    closeness_ratio,
-                    matching_score,
-                ]
-            )
-    print(f"Updated TSV written to: {output_tsv}", flush=True)
+#             # Write updated row
+#             writer.writerow(
+#                 cols
+#                 + [
+#                     closest_variant,
+#                     n_candidates,
+#                     closeness,
+#                     closeness_ratio,
+#                     matching_score,
+#                 ]
+#             )
+#     print(f"Updated TSV written to: {output_tsv}", flush=True)
 
 def look_for_closest_variant_optimized_unified(
     input_tsv,
@@ -737,21 +739,21 @@ def load_globals():
 
     # Load the mutation to variants dictionary once
     mutation_to_variants_path = Path(
-        f"/nfs/research/goldman/anoufa/data/MAPLE_input/dict/clean_samples_mut_to_var_dict_{param_term}.pickle"
+        f"{data_dir}/2/dict/clean_samples_mut_to_var_dict_{param_term}.pickle"
     )
 
-    clean_tree_path_1 = Path(f"/nfs/research/goldman/anoufa/data/MAPLE_output/clean_tree/clean_tree_alignment_file_{param_term}.maple")
+    clean_tree_path_1 = Path(f"{data_dir}/2/clean_tree/clean_tree_alignment_file_{param_term}.maple")
 
     if clean_tree_path_1.exists():
         clean_tree_alignment_path = clean_tree_path_1
     else:
         clean_tree_alignment_path = Path(
-            f"/nfs/research/goldman/anoufa/data/MAPLE_input/alignment_files/clean_tree_alignment_file_{param_term}.maple"
+            f"{data_dir}/2/alignment_files/clean_tree_alignment_file_{param_term}.maple"
         )
 
     
     maple_vcf_dict_path = Path(
-        f"/nfs/research/goldman/anoufa/data/MAPLE_input/dict/maple_vcf_dict_{param_term}_{masked_or_random}.pickle"
+        f"{data_dir}/2/dict/maple_vcf_dict_{param_term}_{masked_or_random}.pickle"
     )
     
     # IF THE FILE EXISTS LOAD IT, OTHERWISE BUILD IT AND STORE IT
@@ -799,8 +801,10 @@ if __name__ == "__main__":
 
     print(f"Processing {masked_or_random} samples...")
     path_store_updated = Path(
-        str(path_store).replace("results", "results_with_contaminants")
+        (str(path_store).replace("results", "results_with_contaminants")).replace("/5/", "/6/")
     )
+    
+    
     
     # Add contaminant candidates
     parallelize_contaminant_search(
@@ -813,10 +817,9 @@ if __name__ == "__main__":
         multiprocess=False,
     )
 
-    params_path = "/nfs/research/goldman/anoufa/src/dpca/_params.py"
 
     update_params_file(
-        params_path,
+        param_path,
         {
             f"processed_placement_{masked_or_random}_with_contaminants": str(
                 path_store_updated
@@ -824,3 +827,8 @@ if __name__ == "__main__":
         },
     )
     print(f"Processed placements results saved to {path_store_updated}")
+    
+    # Save done file
+    done_file_path = Path(f"{data_dir}/done_files/6_find_contaminants_candidates_{masked_or_random}.done")
+    done_file_path.parent.mkdir(parents=True, exist_ok=True)
+    done_file_path.touch()

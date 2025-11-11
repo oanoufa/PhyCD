@@ -25,6 +25,8 @@ masking_ratio = _params.masking_ratio
 psmp_path_random = _params.processed_placement_random_with_contaminants
 psmp_path_masked = _params.processed_placement_masked_with_contaminants
 param_term = _params.param_term
+param_path = _params.param_path
+data_dir = _params.data_dir
 
 
 def gen_ecdf(df_to_plot, x_col, color_col, x_label, y_label, color_sequence, max_points=500, show_legend=True, upper_clip=None, lower_clip=None):
@@ -90,8 +92,8 @@ if __name__ == "__main__":
     print(f"Number of samples with prop_dist_reduced > 1: {df_concat[df_concat['prop_dist_reduced'] > 1].groupby('type').size()}")
 
     # FIGS
-    
-    figs_folder = Path(f"/nfs/research/goldman/anoufa/figs/{param_term}")
+
+    figs_folder = Path(f"{data_dir}/7/{param_term}")
     figs_folder.mkdir(parents=True, exist_ok=True)
     print(f"Generating figures in {figs_folder}")
     
@@ -242,9 +244,9 @@ if __name__ == "__main__":
     plt.savefig(figs_folder / "anomaly_scores_histogram.png", dpi=300)
     
     print("Distribution of anomaly scores saved")
-    
-    path_df_masked = f"/nfs/research/goldman/anoufa/data/MAPLE_output/final_filter/masked_samples_{param_term}.tsv"
-    path_df_random = f"/nfs/research/goldman/anoufa/data/MAPLE_output/final_filter/random_samples_{param_term}.tsv"
+
+    path_df_masked = f"{data_dir}/7/masked_samples_{param_term}.tsv"
+    path_df_random = f"{data_dir}/7/random_samples_{param_term}.tsv"
     df_psmp.to_csv(path_df_masked, sep="\t", index=False)
     df_psmp_random.to_csv(path_df_random, sep="\t", index=False)
     print(f"Masked samples with scores saved to {path_df_masked}")
@@ -254,11 +256,12 @@ if __name__ == "__main__":
         'masked_with_scores': path_df_masked,
         'random_with_scores': path_df_random,
     }
-    
-    update_params_file("/nfs/research/goldman/anoufa/src/dpca/_params.py", updates)
+
+    update_params_file(f"{param_path}", updates)
     generate_sh_param_file()
     print("Updated _params.py with new file paths")
 
-
-    
+    done_file_path = Path(f"{data_dir}/done_files/7_figs.done")
+    done_file_path.parent.mkdir(parents=True, exist_ok=True)
+    done_file_path.touch()
     

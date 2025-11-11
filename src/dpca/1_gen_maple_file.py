@@ -11,7 +11,6 @@ from pathlib import Path
 import random
 from hmmlearn import hmm
 import numpy as np
-import _params
 from _aux_functions import generate_sh_param_file, compress_file, build_maple_entry, build_maple_file, update_params_file
 import signal
 from functools import wraps
@@ -19,6 +18,8 @@ import time
 
 parser = argparse.ArgumentParser(description='Detect potential contaminated areas depending on several thresholds applied on the Viridian samples.')
 
+parser.add_argument('--n_batch', type=int,
+                    help='Number of batches to split the samples into.')
 parser.add_argument('--batch_id', type=int,
                     help='Batch id to process.')
 parser.add_argument('--data_dir', type=str,
@@ -27,39 +28,42 @@ parser.add_argument('--samples_dir', type=str,
                     help='Directory containing the sample names and paths to their Viridian output folders.')
 parser.add_argument('--param_path', type=str,
                     help='Path to the parameters file.')
+parser.add_argument('--depth_thr', type=float,
+                    help='Depth threshold for masking.')
+parser.add_argument('--max_n_het_sites', type=int,
+                    help='Maximum number of heterozygous sites to consider a sample clean enough to be part of the clean tree.')
+parser.add_argument('--path_ref_seq', type=str,
+                    help='Path to the reference sequence used for the pipeline.')
+parser.add_argument('--het_thr', type=float,
+                    help='Heterozygosity threshold used to consider a site heterozygous or not.')
 
 args = parser.parse_args()
 
 # Get the arguments
+n_batch = args.n_batch
 batch_id = args.batch_id
 data_dir = args.data_dir
 samples_dir = args.samples_dir
 param_path = args.param_path
+depth_thr = args.depth_thr
+max_n_het_sites = args.max_n_het_sites
+path_ref_seq = args.path_ref_seq
+het_thr = args.het_thr
 
-n_batch = _params.n_batch
-masking_method = _params.masking_method
-het_thr = _params.het_thr
-depth_thr = _params.depth_thr
-prop_under_depth_thr = _params.prop_under_depth_thr
-typical_depth_thr = _params.typical_depth_thr
-n_masked_thr = _params.n_masked_thr
-path_ref_seq = _params.path_ref_seq
-param_term = _params.param_term
-startprob = _params._startprob
-transmat = _params._transmat
-means = _params._means
-covars = _params._covars
+param_term = f"{depth_thr}_{max_n_het_sites}"
+
+masking_method="thr"
 
 
-def generate_batchs_pairs(n_batchs, path_vdn = samples_dir):
+def generate_batchs_pairs(n_batch, path_vdn = samples_dir):
     """Generate a 2D list with structure such that L[i][j] = sample j of batch i.
     Samples are pairs (path, read_name) where path is the path to the qc file.
 
     Args:
-        n_batchs (int): Number of batches to generate.
+        n_batch (int): Number of batches to generate.
     """
     # Generate a list of ids to chose samples
-    batchs_samples_list = [[] for _ in range(n_batchs)]
+    batchs_samples_list = [[] for _ in range(n_batch)]
 
     with lzma.open(path_vdn, "rt") as f:
         # Each line is composed of read_name and path to qc file
@@ -70,10 +74,10 @@ def generate_batchs_pairs(n_batchs, path_vdn = samples_dir):
             # Get the read_name and path
             read_name, path = line.strip().split("\t")
             path = path + "/qc.tsv.gz"
-            batchs_samples_list[i % n_batchs].append((path, read_name))
+            batchs_samples_list[i % n_batch].append((path, read_name))
             
             
-        # for i, batch in tqdm(enumerate(batchs_samples_list), desc="Generating batches", total=n_batchs):
+        # for i, batch in tqdm(enumerate(batchs_samples_list), desc="Generating batches", total=n_batch):
         #     with lzma.open(f"{data_storing_dir}/batches/batch_{i}.pkl.xz", "wb") as f:
         #         pickle.dump(batch, f)
         # Not enough memory to store all batches
@@ -320,11 +324,11 @@ def apply_masking(sample_list,
             # Loop to count het sites and potentially mask positions if using threshold-based masking
             het_prop = 1 if clean_depth == 0 else cons_depth / clean_depth
 
-            if het_prop <= 0.90:
+            if het_prop <= 1 - het_thr:
                 n_het_sites += 1
             
             if not hmm_model:
-                if clean_depth <= max(depth_int_thr, 50) and het_prop <= het_thr:
+                if clean_depth <= max(depth_int_thr, 50):
                     # 50 is the minimum depth for consensus calling in our version
                     if masked_seq[i] != "n":
                         # We only count the positions that are masked by DPCA and NOT MAPLE or VIRIDIAN
@@ -463,14 +467,20 @@ if __name__ == "__main__":
         
         # Update the params.py file with data_dir
         updates = {
+            "n_batch": n_batch,
             "data_dir": data_dir,
             "samples_dir": samples_dir,
-            "param_path": param_path
+            "param_path": param_path,
+            "depth_thr": depth_thr,
+            "max_n_het_sites": max_n_het_sites,
+            "path_ref_seq": path_ref_seq,
+            "het_thr": het_thr
         }
 
         update_params_file(param_path, updates)
-        generate_sh_param_file()
-        print("Run the generated params.sh file to set the parameters in the environment.")
+        print("Generated params.py file.")
+        param_sh_path = param_path.replace(".py", ".sh")
+        generate_sh_param_file(param_sh_path)
         # Remove the files in the batches folder if they exist
         batches_folder = Path(f"{data_dir}/1/")
         batches_folder.mkdir(parents=True, exist_ok=True)
@@ -480,7 +490,7 @@ if __name__ == "__main__":
 
     else:
         print("Waiting for process 1 to clear the batches folder...")
-        time.sleep(120)
+        time.sleep(90)
 
     batchs_samples_list = generate_batchs_pairs(n_batch)
     
@@ -489,7 +499,7 @@ if __name__ == "__main__":
     del batchs_samples_list
     
     print(param_term)
-    path_write_file = f"{DATA_DIR}/1/maple_alignment_{masking_method}_batch{batch_id}_{param_term}.maple"
+    path_write_file = f"{data_dir}/1/maple_alignment_batch{batch_id}_{param_term}.maple"
 
     if masking_method == "hmm":
         # Initialize the HMM model with the parameters from params.py
@@ -517,6 +527,13 @@ if __name__ == "__main__":
 
     else:
         hmm_model = None
+        
+    prop_under_depth_thr = 1
+    # unused
+    typical_depth_thr = 0
+    # unused
+    n_masked_thr = 30000
+    # unused
 
     # Run the function on each batch
     path_write_file = apply_masking(sample_list,
@@ -529,7 +546,8 @@ if __name__ == "__main__":
                                     path_ref_seq=path_ref_seq,
                                     path_write_file=path_write_file,
                                     param_term=param_term,
-                                    hmm_model=hmm_model)
+                                    hmm_model=hmm_model,
+                                    data_dir=data_dir)
 
     # Compress the file
     # compress_file(path_write_file)
@@ -538,6 +556,7 @@ if __name__ == "__main__":
     print(f"Batch {batch_id} done")
     
     # Save a done file
-    with open(f"{data_dir}/1/maple_alignment_batch_{batch_id}.done", "w") as f:
-        f.write("done\n")
+    done_file_path = Path(f"{data_dir}/done_files/1_maple_alignment_batch_{batch_id}.done")
+    done_file_path.parent.mkdir(parents=True, exist_ok=True)
+    done_file_path.touch()
     

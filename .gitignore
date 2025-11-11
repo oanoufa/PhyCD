@@ -19,3 +19,7 @@ figs/
 
 # data
 data/
+
+# other folders
+src/trash/
+pipeline/

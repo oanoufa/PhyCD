@@ -6,11 +6,15 @@ import lzma
 import _params
 from tqdm import tqdm
 
+import _params
 
-def generate_sh_param_file():
+samples_dir = _params.samples_dir
+
+
+def generate_sh_param_file(path = "/nfs/research/goldman/anoufa/shell_scripts/params.sh"):
     """Generate a sh param file containing the parameters in the python params.py file.
     """
-    with open("/nfs/research/goldman/anoufa/shell_scripts/params.sh", "w") as f:
+    with open(path, "w") as f:
         for key, value in _params.__dict__.items():
             if not key.startswith("_") and not callable(value):
                 print(f"Writing {key}={value} to params.sh")
@@ -266,7 +270,7 @@ def expand_ambiguous_mutation(mut, remove_starting_nt = False):
 def generate_sample_list(sample_names):
     """Get the sample names in the result dataset and retrieve the paths to their qc.tsv.gz files.
     """
-    path_vdn = "/nfs/research/zi/mhunt/Viridian_wf_paper/Vdn_all_ena/Final_archiving/run2viridian_dir.tsv.xz"
+    path_vdn = samples_dir
     # if sample_names is a list, convert to set for faster lookup
     if isinstance(sample_names, list):
         sample_names = set(sample_names)

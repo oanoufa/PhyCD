@@ -1,6 +1,6 @@
 # Convert the Newick tree to Taxonium format with metadata info
-inputTree="/nfs/research/goldman/anoufa/data/MAPLE_output/masked/mas_tree.tree"
-outputTree="/nfs/research/goldman/anoufa/data/MAPLE_output/masked/mas_tree.jsonl"
+inputTree="/nfs/research/goldman/anoufa/pipeline/3/clean_tree/clean_0.1_3_tree.tree"
+outputTree="/nfs/research/goldman/anoufa/pipeline/3/clean_tree/clean_0.1_3_tree.jsonl"
 metadataFile="/nfs/research/goldman/anoufa/data/MAPLE_input/others/viridian_samples.metadata.tsv"
 
 sbatch -J ntt -t 04:00:00 --mem=32G \

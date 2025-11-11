@@ -12,7 +12,7 @@ from tqdm import tqdm
 import pandas as pd
 from collections import Counter
 import _params
-from _aux_functions import update_params_file
+from _aux_functions import update_params_file, generate_sample_list
 import argparse
 import csv
 
@@ -26,7 +26,8 @@ args = parser.parse_args()
 
 # Get the arguments
 masked_or_random = args.masked_or_random
-
+data_dir = _params.data_dir
+samples_dir = _params.samples_dir
 path_ref_seq = _params.path_ref_seq
 inputTree = _params.inputTree
 inputRates = _params.inputRates
@@ -34,6 +35,8 @@ n_diff_mut = _params.n_diff_mut
 masked_max_dist = _params.masked_max_dist
 masking_ratio = _params.masking_ratio
 param_term = _params.param_term
+param_path = _params.param_path
+het_thr = _params.het_thr
 
 
 def remove_samples_without_three_types(df: pd.DataFrame) -> pd.DataFrame:
@@ -64,29 +67,6 @@ def remove_samples_placed_on_self(row):
         # Remove the row
         return True
     return False
-
-def generate_sample_list(sample_names):
-    """Get the sample names in the result dataset and retrieve their list of heterozygosity values.
-    """
-    path_vdn = "/nfs/research/zi/mhunt/Viridian_wf_paper/Vdn_all_ena/Final_archiving/run2viridian_dir.tsv.xz"
-    # Generate a list of ids to chose samples
-    batchs_samples_list = []
-
-    with lzma.open(path_vdn, "rt") as f:
-        # Each line is composed of read_name and path to qc file
-        # Iterate over the lines and get the path, read_name if the line's index is in chosen_samples
-        next(f)  # Skip header line
-        for line in tqdm(f, desc="Generating sample list",
-                            mininterval=120):
-            # Get the read_name and path
-            read_name, path = line.strip().split("\t")
-            path = path + "/qc.tsv.gz"
-            if read_name in sample_names:
-                batchs_samples_list.append((path, read_name))
-                sample_names.remove(read_name)
-            if len(sample_names) == 0:
-                break
-    return batchs_samples_list
 
 def build_het_sites_dict(sample_list, het_thr):
     """Take as input a set of sample names, find their qc file,
@@ -175,7 +155,7 @@ if __name__ == "__main__":
     print(f"Processing {masked_or_random} samples...")
 
     # Define the path to the folder containing the tsv files
-    path_store = Path(f"/nfs/research/goldman/anoufa/data/MAPLE_output/processed_placements/processed_placements_results_{masked_or_random}_{param_term}.tsv")
+    path_store = Path(f"{data_dir}/5/processed_placements_results_{masked_or_random}_{param_term}.tsv")
     
     # If path_store already exists, add a suffix to avoid overwriting
     if path_store.exists():
@@ -194,7 +174,7 @@ if __name__ == "__main__":
     unmasked_placement_dict = {}
     masked_placement_dict = {}
 
-    sample_placement_output_path = Path(f"/nfs/research/goldman/anoufa/data/MAPLE_output/output_FULL_metaData_samplePlacements_{param_term}.tsv.gz")
+    sample_placement_output_path = Path(f"{data_dir}/4/output_FULL_metaData_samplePlacements_{param_term}.tsv.gz")
     # Read the tsv file
     
     with open(path_store, "a") as f_out:
@@ -303,7 +283,7 @@ if __name__ == "__main__":
     # min_ratio_prop: Minimum ratio between the proportion of genome masked and the proportion between the unmasked and masked branch lengths:
     # Example: Branch lengths 3 1 --> masked 66% of the problematic mutations, prop of genome masked 30% 
     # If min_ratio_prop == 2 we retain this sample but if min_ratio_prop == 3 we don't keep it
-    n_masked_path = Path(f"/nfs/research/goldman/anoufa/data/MAPLE_output/n_masked_and_masked_mut/n_masked_{param_term}.tsv")
+    n_masked_path = Path(f"{data_dir}/2/n_masked_and_masked_mut/n_masked_{param_term}.tsv")
     n_masked_df = pd.read_csv(n_masked_path, sep="\t", names=["sample_name", "n_masked_cons", "n_masked_masked", "n_het_sites"], header=None)
     
     print(f"Median and mean positions masked in unmasked samples: {n_masked_df['n_masked_cons'].median()} and {n_masked_df['n_masked_cons'].mean()}", flush=True)
@@ -340,7 +320,7 @@ if __name__ == "__main__":
     masked_placements_df[f'{masked_or_random}_support'] = masked_placements_df[f'{masked_or_random}_support'].astype(float)
     
     # Join with df containing the mutations masked during gen_maple_file
-    path_df_mut_masked = f"/nfs/research/goldman/anoufa/data/MAPLE_output/n_masked_and_masked_mut/masked_mut_{param_term}.tsv"
+    path_df_mut_masked = f"{data_dir}/2/n_masked_and_masked_mut/masked_mut_{param_term}.tsv"
     df_mut_masked = pd.read_csv(path_df_mut_masked, sep='\t')
     df_mut_masked = df_mut_masked[df_mut_masked['sample_name'].isin(sample_names)]
     df_mut_masked = df_mut_masked[['sample_name', f'masked_mutations_{masked_or_random}']]
@@ -382,9 +362,8 @@ if __name__ == "__main__":
     # Build heterozygous sites dict
     print("Building heterozygous sites dictionary...")
     sample_names = set(df["sample_name"].tolist())
-    het_thr = 0.10
     het_sites_dict = build_het_sites_dict(sample_names, het_thr)
-    het_sites_path = Path(f"/nfs/research/goldman/anoufa/data/MAPLE_input/dict/het_sites_dict_{masked_or_random}_{param_term}.pickle")
+    het_sites_path = Path(f"{data_dir}/5/het_sites_dict_{masked_or_random}_{param_term}.pickle")
     with open(het_sites_path, "wb") as f:
         pickle.dump(het_sites_dict, f)
     print(f"Heterozygous sites dictionary saved to {het_sites_path}")
@@ -394,11 +373,15 @@ if __name__ == "__main__":
     print(f"Processed placements results saved to {path_store}")
     
     # Add processed_placement to _params.py file and het_sites_dict path
-    params_path = "/nfs/research/goldman/anoufa/src/dpca/_params.py"
-    update_params_file(params_path,
+    update_params_file(param_path,
                        {f'processed_placement_{masked_or_random}':str(path_store), 
                         f'het_sites_dict_{masked_or_random}':str(het_sites_path)}
                        )
 
     print(f"Processed placements results saved to {path_store}")
+    
+    # Save done file
+    done_file_path = Path(f"{data_dir}/done_files/5_process_maple_placements_{masked_or_random}.done")
+    done_file_path.parent.mkdir(parents=True, exist_ok=True)
+    done_file_path.touch()
         

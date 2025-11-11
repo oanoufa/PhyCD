@@ -14,6 +14,7 @@ startprob = _params._startprob
 transmat = _params._transmat
 means = _params._means
 covars = _params._covars
+samples_dir = _params.samples_dir
 
 def generate_sample_data(n_samples):
     """Generate a 2D list with structure such that L[i][j] = sample j of batch i.
@@ -22,7 +23,7 @@ def generate_sample_data(n_samples):
     Args:
         n_batchs (int): Number of batches to generate.
     """
-    path_vdn = "/nfs/research/zi/mhunt/Viridian_wf_paper/Vdn_all_ena/Final_archiving/run2viridian_dir.tsv.xz"
+    path_vdn = samples_dir
     # Generate a list of ids to chose samples
     batchs_samples_list = []
     

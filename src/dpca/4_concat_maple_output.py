@@ -17,20 +17,20 @@ n_diff_mut = _params.n_diff_mut
 masked_max_dist = _params.masked_max_dist
 masking_ratio = _params.masking_ratio
 param_term = _params.param_term
+data_dir = _params.data_dir
 
 
 if __name__ == "__main__":
     
 
     # Access the total median cat list and add the results to the file
-    final_path = Path(f"/nfs/research/goldman/anoufa/data/MAPLE_output/output_FULL_metaData_samplePlacements_{param_term}.tsv")
+    final_path = Path(f"{data_dir}/4/output_FULL_metaData_samplePlacements_{param_term}.tsv")
 
     final_mut_tsv = pd.DataFrame(columns=["sample", "placements", "optimizedBlengths", "mutations"])
-    
-    batches_folder_path = Path("/nfs/research/goldman/anoufa/data/MAPLE_output/batches/")
-    
+
+    batches_folder_path = Path(f"{data_dir}/3/")
     dict_file_checker = {i: False for i in range(n_batch)}
-    
+        
     for mut_tsv_file in tqdm(batches_folder_path.glob("*_samplePlacements.tsv"),
                                 desc="Processing files", unit="file",
                                 mininterval=180):
@@ -54,12 +54,15 @@ if __name__ == "__main__":
     else:
         print(f"All {n_batch} batch files processed successfully.")
     
-    final_mut_tsv.to_csv(final_path, sep="\t", index=False)
+    # Only save if tsv is not empty
+    if final_mut_tsv.shape[0] > 0:
+        final_mut_tsv.to_csv(final_path, sep="\t", index=False)
     
     print("Concatenation complete. Now compressing the final file...", flush=True)
     
     # Compress the final file
-    compress_file(final_path)
+    if final_path.exists():
+        compress_file(final_path)
     
     print("Compression complete. Now deleting all updatedBlengths.tree files...", flush=True)
     
@@ -69,13 +72,17 @@ if __name__ == "__main__":
         
     print("All .tree files deleted.")
     # Delete the MAPLE alignment files if everything went well
-    maple_files_path = Path("/nfs/research/goldman/anoufa/data/MAPLE_input/1_batches/")
+    maple_files_path = Path(f"{data_dir}/1/")
     print("Now deleting all MAPLE alignment files...", flush=True)
     for maple_file in maple_files_path.glob("maple_alignment_batch*"):
         # Delete all the files except the ones in missing batches
-        batch_id = int(maple_file.stem.split("batch")[1])
+        batch_id = int((maple_file.stem.split("batch")[1]).split('_')[0])
         if dict_file_checker.get(batch_id, True):
             maple_file.unlink()
     
     print(f"Final output saved to {final_path.with_suffix('.gz')}")
     
+    # Save done file
+    done_file_path = Path(f"{data_dir}/done_files/4_concat_maple_output.done")
+    done_file_path.parent.mkdir(parents=True, exist_ok=True)
+    done_file_path.touch()
