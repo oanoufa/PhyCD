@@ -14,12 +14,12 @@ security_side_project/
 .venv/
 .vscode/
 
-# figs
+# other folders
+pipeline/
+src/
+shell_scripts/
 figs/
-
-# data
 data/
 
-# other folders
-src/trash/
-pipeline/
+# metadata file (too large)
+/input_data/viridian_samples.metadata.tsv.zst
