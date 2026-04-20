@@ -4,7 +4,7 @@
 #SBATCH --error=/nfs/research/goldman/anoufa/pipeline/snakemake_files/snake_master_%a.err
 #SBATCH --time=720:00:00
 #SBATCH --mem=32G
-#SBATCH --array=1-3
+#SBATCH --array=0-0
 
 echo "Loading snakemake module..."
 
@@ -19,7 +19,7 @@ echo "Snakemake module loaded."
 depth_thr_list=(0.05 0.05 0.05 0.05)
 max_dropout_masked_list=(0 0 0 0)
 het_thr_list=(0.1 0.1 0.1 0.1)
-max_het_list=(1 5 7 9)
+max_het_list=(3 5 7 9)
 
 # Select based on job ID
 depth_thr=${depth_thr_list[$SLURM_ARRAY_TASK_ID]}
