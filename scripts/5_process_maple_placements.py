@@ -346,7 +346,7 @@ if __name__ == "__main__":
     df.rename(columns={
         masked_or_random: 'distance',
         'n_masked_masked': 'n_masked',
-        'masked_mutations_to_tree': 'mutations_to_tree',
+        f'{masked_or_random}_mutations_to_tree': 'mutations_to_tree',
         f'{masked_or_random}_placement': 'placement',
         f'{masked_or_random}_support': 'support',
         f'masked_mutations_{masked_or_random}': 'mutations_masked'}, inplace=True)

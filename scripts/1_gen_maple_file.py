@@ -93,31 +93,22 @@ def build_masked_pos_dict():
         
     for i in range(29769, 29903+1): # Masking the last 134 positions
         maskedPoss[i] = True
-        
-    maskedPoss[25202]=True # high het
-    maskedPoss[21987]=True # high het
-    maskedPoss[23118]=True # high het
-    maskedPoss[8835]=True # high het
-    maskedPoss[15521]=True # high het
-    maskedPoss[27507]=True
-    maskedPoss[26766]=True
+
+    maskedPoss[274]=True
+    maskedPoss[4321]=True
     maskedPoss[8008]=True
     maskedPoss[8012]=True
-    maskedPoss[15510]=True
-    maskedPoss[17259]=True
-    maskedPoss[19413]=True
-    maskedPoss[22786]=True
-    maskedPoss[22882]=True
-    maskedPoss[23948]=True
     maskedPoss[8826]=True
     maskedPoss[8829]=True
+    maskedPoss[8835]=True # high het
+    maskedPoss[15510]=True
+    maskedPoss[15521]=True # high het
     maskedPoss[15854]=True
+    maskedPoss[17259]=True
+    maskedPoss[19413]=True
     maskedPoss[19672]=True
     maskedPoss[21650]=True
-    maskedPoss[25296]=True
-    maskedPoss[25324]=True
-    maskedPoss[25336]=True
-    maskedPoss[29687]=True
+    maskedPoss[21987]=True # high het
     maskedPoss[22026]=True
     maskedPoss[22027]=True
     maskedPoss[22028]=True
@@ -132,15 +123,30 @@ def build_masked_pos_dict():
     maskedPoss[22198]=True
     maskedPoss[22202]=True
     maskedPoss[22204]=True
-    maskedPoss[274]=True
-    maskedPoss[4321]=True
+    maskedPoss[22786]=True
+    maskedPoss[22882]=True
+    maskedPoss[23118]=True # high het
+    maskedPoss[23948]=True
+    maskedPoss[25202]=True # high het
+    maskedPoss[25296]=True
+    maskedPoss[25324]=True
+    maskedPoss[25336]=True
     maskedPoss[26530]=True
+    maskedPoss[26766]=True
+    maskedPoss[27507]=True
     maskedPoss[28245]=True
     maskedPoss[28247]=True
     maskedPoss[28249]=True
-    maskedPoss[28253]=True
     maskedPoss[28251]=True
+    maskedPoss[28253]=True
     maskedPoss[28254]=True
+    maskedPoss[29687]=True
+
+    # The positions masked are: 
+    # 1-72, 29769-29903,
+    # 274, 4321, 8008, 8012, 8826, 8829, 8835, 15510, 15521, 15854, 17259, 19413, 19672, 21650, 21987,
+    # 22026-22034, 22195, 22197, 22198, 22202, 22204, 22786, 22882, 23118, 23948, 25202, 25296, 25324,
+    # 25336, 26530, 26766, 27507, 28245-28247-28249-28251-28253-28254 and 29687.
     
     return maskedPoss
 

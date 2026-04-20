@@ -22,4 +22,4 @@ figs/
 data/
 
 # metadata file (too large)
-/input_data/viridian_samples.metadata.tsv.zst
+input_data/viridian_samples.metadata.tsv.zst

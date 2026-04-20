@@ -67,8 +67,8 @@ with open(path_master_file)  as f:
 
 #file with pairs of haplotypes to consider for matching:
 # dict with structure {
-#     "sample_id1": {"contaminatnt_id1", "contaminatnt_id2", ...},
-#     "sample_id2": {"contaminatnt_id3", "contaminatnt_id4", ...},
+#     "sample_id1": {"contaminant_id1", "contaminant_id2", ...},
+#     "sample_id2": {"contaminant_id3", "contaminant_id4", ...},
 #     ...
 # }
 pairs_dict_file = path / f"sample_contaminant_pairs_{masked_or_random}.pickle"
@@ -205,6 +205,7 @@ def logliki_m_epsilon(parm, bc, A_known):
     A_known = array of known A values for each site (0..15 index)
     A_known is sequences_pairs_mat for the specific haplotype pair being considered
     """
+    logit_m, logit_epsilon = parm
     m = get_inv_logit2(logit_m)
     epsilon = get_inv_logit(logit_epsilon)
     
@@ -232,6 +233,7 @@ def logliki_self_pair(parm, bc, A_known):
     A_known is sequences_pairs_mat for the specific haplotype pair being considered
     """
     m = 1
+    logit_epsilon = parm[0]
     epsilon = get_inv_logit(logit_epsilon)
     
     mat = get_p_b_diploid(m, epsilon)
@@ -262,7 +264,7 @@ if __name__ == "__main__":
     ### ANALYSE THE DATA ###
     # set up output header
     with open(outlog, "w") as f:
-        f.write("id\thaplotype_pair:p_pair:ML_mu:ML_epsilon\tcontaminated\n")
+        f.write("sample_name\thaplotype_pair:p_pair:ML_mu:ML_epsilon\tcontaminated\n")
     
     #  DIPLOID lookup for O(1) mapping  
     DIPLOID_lookup = {val: idx for idx, val in enumerate(DIPLOID)}
@@ -355,15 +357,15 @@ if __name__ == "__main__":
 
             # Compute mu for the pair
             if contaminant == sample_id:
-                parm = [parm[1]]
-                bounds = [bounds[1]]
+                parm_self_pair = [parm[1]]
+                bounds_self_pair = [bounds[1]]
                 def neg_logliki_epsilon(parm):
                     return -logliki_self_pair(parm, bc=base_count, A_known=A_known)
                 
                 opt_mu = minimize(neg_logliki_epsilon,
-                                    parm,
+                                    parm_self_pair,
                                     method="L-BFGS-B",
-                                    bounds=bounds)
+                                    bounds=bounds_self_pair)
                 md_ML_m = 1
                 md_ML_epsilon = get_inv_logit(opt_mu.x[0])
             
@@ -423,37 +425,11 @@ if __name__ == "__main__":
             sequences_pairs_output += f", {name}:{val:.3f}:{mu_pair:.3f}:{epsilon_pair:.3f}"
 
         P_cont = (pi_con * np.sum(sequences_pairs_map)) / ((1 - pi_con)*self_pair_map + (pi_con * np.sum(sequences_pairs_map)))
+        # P_cont is the posterior probability of contamination,
+        # using Bayes' theorem with pi_con as the prior probability of contamination and
+        # the likelihoods from the pairs and self pair
     
         with open(outlog, "a") as f:
             f.write(
                 f"{sample_id}\t{sequences_pairs_output.strip(', ')}\t{P_cont}\n"
             )
-
-    # print a hist plot of normalized_self_pair_val_list
-    # clip normalized self pair val list between 0 and 1
-    # normalized_self_pair_val_list = np.clip(normalized_self_pair_val_list, 0, 1)
-    # val_hist = ff.create_distplot(
-    #     [normalized_self_pair_val_list],
-    #     ['Normalized self pair value'],
-    #     histnorm='probability density',
-    #     show_curve=True,
-    #     show_hist=True,
-    #     bin_size=0.05,
-    #     show_rug=True,
-    # )
-    
-    # val_hist.write_html(f"{data_dir}/8/eyre_model_{masked_or_random}_self_pair_values.html")
-    # val_hist.write_image(f"{data_dir}/8/eyre_model_{masked_or_random}_self_pair_values.png")
-    
-    # epsilon_hist = ff.create_distplot(
-    #     [full_epsilon_list],
-    #     ['Error probability'],
-    #     histnorm='probability density',
-    #     show_curve=True,
-    #     show_hist=True,
-    #     bin_size=0.005,
-    #     show_rug=True,
-    # )
-    
-    # epsilon_hist.write_html(f"{data_dir}/8/eyre_model_{masked_or_random}_epsilon.html")
-    # epsilon_hist.write_image(f"{data_dir}/8/eyre_model_{masked_or_random}_epsilon.png")

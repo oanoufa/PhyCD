@@ -333,7 +333,7 @@ rule find_contaminant_candidates_masked:
     output:
         f"{data_dir}/done_files/6_find_contaminants_candidates_masked.done"
     resources:
-        mem_mb=128000,
+        mem_mb=256000,
         runtime=800 # in minutes
     shell:
         """
@@ -360,7 +360,7 @@ rule find_contaminant_candidates_random:
     output:
         f"{data_dir}/done_files/6_find_contaminants_candidates_random.done"
     resources:
-        mem_mb=128000,
+        mem_mb=256000,
         runtime=800 # in minutes
     shell:
         """

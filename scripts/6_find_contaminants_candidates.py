@@ -272,8 +272,7 @@ def look_for_best_contaminant(
             het_mut_set.update(
                 f"{pos}{minor_allele}".upper() 
                 for pos, minor_allele, _ in sample_het_sites
-                )
-            # het_mut_set contains minor alleles at heterozygous sites
+                ) # het_mut_set contains minor alleles at heterozygous sites
 
             # Expand mutations masked by gen_maple_file
             expanded_mut_set = set()
@@ -287,7 +286,8 @@ def look_for_best_contaminant(
             candidate_counts = Counter()
             candidate_counts.update(chain.from_iterable(mutation_to_variants.get(mut, []) for mut in expanded_mut_set))
 
-            if not candidate_counts: # If no mutations were masked by gen_maple_file, try to match with heterozygous sites
+            if not candidate_counts and len(het_mut_set) > 0:
+                # If no mutations were masked by gen_maple_file, try to match with heterozygous sites
                 candidate_counts = Counter()
                 candidate_counts.update(chain.from_iterable(mutation_to_variants.get(mut, []) for mut in het_mut_set))
             
@@ -307,7 +307,7 @@ def look_for_best_contaminant(
                         # Retrieve the vcf entry of the candidate
                         candidate_vcf_entry = maple_vcf_dict.get(
                             (candidate, "clean"), []
-                        )
+                        )                        
                         candidate_mut_set = {
                             f"{pos}{base}".upper()  # Format it to a string like 2343T
                             for base, pos, is_del_or_n in parse_mutations(candidate_vcf_entry)
@@ -318,19 +318,19 @@ def look_for_best_contaminant(
                             for m in candidate_mut_set
                             if int(m[:-1]) in masked_positions
                         }  # Only add the mutation if it falls within the masked regions
-
+                        
+                        # SCORE 1
                         # Check intersection, penalize missing mutations and extra mutations
                         shared = expanded_mut_set & candidate_mut_on_masked_regions_set
                         extra = candidate_mut_on_masked_regions_set - expanded_mut_set
-                        shared_het = het_mut_set & candidate_mut_set
-
                         score_1 = len(shared) / (len(alg_masked_mut_set) + len(extra) or 1) # Ranges in [0, 1]
-                        score_2 = len(shared_het) / (len(het_mut_set) or 1) # Ranges in [0, 1]
-
+                        # SCORE 2
                         if len(het_mut_set) == 0:
-                            print(sample_name)
-                        
-                        final_score = (score_1 + score_2) / 2
+                            final_score = score_1
+                        else:
+                            shared_het = het_mut_set & candidate_mut_set
+                            score_2 = len(shared_het) / (len(het_mut_set) or 1) # Ranges in [0, 1]
+                            final_score = (score_1 + score_2) / 2
 
                         if final_score > best_final_score:
                             best_contaminant = candidate
