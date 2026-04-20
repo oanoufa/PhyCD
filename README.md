@@ -106,11 +106,9 @@ detailed parameter exploration.
 
 PhyCD expects as input:
 
-- **Consensus sequences** assembled by
+- **Quality control files** assembled by
   [Viridian](https://github.com/iqbal-lab-org/viridian)
-- **Per-position coverage data** for each sample
-- **Per-position allele counts** for heterozygous site detection and
-  likelihood-based assessment
+- **Reference sequence** of the pathogen (e.g., SARS-CoV-2 reference genome)
 
 ## Output
 
