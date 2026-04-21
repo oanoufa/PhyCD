@@ -264,9 +264,6 @@ if __name__ == "__main__":
     print(f"Median and mean branch lengths for unmasked samples: {df['unmasked'].median()} and {df['unmasked'].mean()}", flush=True)
 
     # Filtering interesting samples:
-    # Remove samples where unmasked_dist is under 1 (SAMPLES ALREADY WELL PLACED)
-    df = df[df['unmasked'] >= 1]
-    print(f"Number of rows after removing samples with unmasked dist under 1: {len(df)}", flush=True)
     
     # Remove samples where masked_dist is over masked_max_dist
     df = df[df[masked_or_random] <= masked_max_dist]

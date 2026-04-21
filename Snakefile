@@ -22,9 +22,9 @@ print(f"  het_thr:            {het_thr}",             flush=True)
 print(f"  max_n_het_sites:    {max_n_het_sites}",     flush=True)
 
 # --- 5_process_sample_placements default parameters ---
-n_diff_mut    = 2
-masked_max_dist = 5
-masking_ratio = 0
+n_diff_mut    = -5 # Default is 2, with 0 every sample will be flagged
+masked_max_dist = 50 # Default is 5
+masking_ratio = 0 # Now unused but is a threshold on the masking ratio to flag a sample as putatively contaminated
 
 # --- Paths: edit these for your local setup ---
 root_dir    = "/export/home1/users/mpath/oanoufa/PhyCD/PhyCD"
@@ -41,7 +41,7 @@ pyenv_path = f"{root_dir}/.phycd_venv/bin/python"
 pypy_path  = f"{root_dir}/.phycd_venv/bin/python"
 maple_path = f"{scripts_dir}/MAPLEv0.7.5.py"
 
-compress = 1
+compress = 0
 
 
 # --- Rules (identical logic to HPC version, resources reduced) ---
@@ -66,7 +66,7 @@ rule all:
 rule gen_maple_file:
     threads: 1
     output:
-        f"{data_dir}/done_files/1/1_maple_alignment_batch_{{batch}}.done"
+        done = f"{data_dir}/done_files/1/1_maple_alignment_batch_{{batch}}.done",
     shell:
         """
         mkdir -p {data_dir}/done_files/1
@@ -85,7 +85,7 @@ rule gen_maple_file:
             --param_term {param_term} \
             --compress {compress} \
             > {out_err_dir}/1/1_{wildcards.batch}_sm.out 2> {out_err_dir}/1/1_{wildcards.batch}_sm.err
-        touch {output}
+        touch {output.done}
         """
 
 
@@ -94,7 +94,13 @@ rule process_gmf_output:
     input:
         expand(f"{data_dir}/done_files/1/1_maple_alignment_batch_{{batch}}.done", batch=BATCHES)
     output:
-        f"{data_dir}/done_files/2_process_gmf_output.done"
+        done = f"{data_dir}/done_files/2_process_gmf_output.done",
+        clean_tree_alignment = f"{data_dir}/2/alignment_files/clean_tree_alignment_file_{param_term}.maple",
+        masked_alignment = f"{data_dir}/2/alignment_files/masked_alignment_{param_term}.maple",
+        random_alignment = f"{data_dir}/2/alignment_files/random_alignment_{param_term}.maple",
+        unmasked_alignment = f"{data_dir}/2/alignment_files/unmasked_alignment_{param_term}.maple",
+        masked_mut = f"{data_dir}/2/n_masked_and_masked_mut/masked_mut_{param_term}.tsv",
+        n_masked = f"{data_dir}/2/n_masked_and_masked_mut/n_masked_{param_term}.tsv",
     shell:
         """
         mkdir -p {data_dir}/2
@@ -107,7 +113,7 @@ rule process_gmf_output:
             --num_cores {num_cores} \
             --compress {compress} \
             > {out_err_dir}/2/2_cmf_sm.out 2> {out_err_dir}/2/2_cmf_sm.err
-        touch {output}
+        touch {output.done}
         """
 
 
@@ -116,7 +122,8 @@ rule generate_clean_tree:
     input:
         f"{data_dir}/done_files/2_process_gmf_output.done"
     output:
-        f"{data_dir}/done_files/2_generate_clean_tree.done"
+        done = f"{data_dir}/done_files/2_generate_clean_tree.done",
+        clean_tree = f"{data_dir}/clean_tree/clean_{param_term}_tree.tree"
     shell:
         """
         if [ ! -f "{data_dir}/clean_tree/clean_{param_term}_tree.tree" ]; then
@@ -134,7 +141,7 @@ rule generate_clean_tree:
             touch {output}
         else
             echo "Clean tree already exists. Skipping."
-            touch {output}
+            touch {output.done}
         fi
         """
 
@@ -144,7 +151,8 @@ rule generate_taxonium_tree:
     input:
         f"{data_dir}/done_files/2_generate_clean_tree.done"
     output:
-        f"{data_dir}/done_files/2_newick_to_taxonium.done"
+        done = f"{data_dir}/done_files/2_newick_to_taxonium.done",
+        clean_tree_jsonl = f"{data_dir}/clean_tree/clean_{param_term}_tree.jsonl"
     shell:
         """
         inputTree="{data_dir}/clean_tree/clean_{param_term}_tree.tree"
@@ -157,10 +165,10 @@ rule generate_taxonium_tree:
                 -c Country,Viridian_pangolin_1.29 \
                 --key_column Run \
                 > {out_err_dir}/2/2_ntt_sm.out 2> {out_err_dir}/2/2_ntt_sm.err
-            touch {output}
+            touch {output.done}
         else
             echo "JSONL tree already exists. Skipping."
-            touch {output}
+            touch {output.done}
         fi
         """
 
@@ -170,7 +178,7 @@ rule maple_sample_placement:
     input:
         f"{data_dir}/done_files/2_newick_to_taxonium.done"
     output:
-        f"{data_dir}/done_files/3/3_maple_sample_placement_{{batch}}.done"
+        done = f"{data_dir}/done_files/3/3_maple_sample_placement_{{batch}}.done"
     shell:
         """
         mkdir -p {data_dir}/3
@@ -192,7 +200,7 @@ rule maple_sample_placement:
             --output "{data_dir}/3/output_{wildcards.batch}" \
             --overwrite \
             > {out_err_dir}/3/3_{wildcards.batch}_sm.out 2> {out_err_dir}/3/3_{wildcards.batch}_sm.err
-        touch {output}
+        touch {output.done}
         """
 
 
@@ -201,7 +209,7 @@ rule concat_maple_output:
     input:
         expand(f"{data_dir}/done_files/3/3_maple_sample_placement_{{batch}}.done", batch=BATCHES)
     output:
-        f"{data_dir}/done_files/4_concat_maple_output.done"
+        done = f"{data_dir}/done_files/4_concat_maple_output.done"
     shell:
         """
         mkdir -p {data_dir}/4
@@ -212,7 +220,7 @@ rule concat_maple_output:
             --n_batch {n_batch} \
             --compress {compress} \
             > {out_err_dir}/4/4_cmo_sm.out 2> {out_err_dir}/4/4_cmo_sm.err
-        touch {output}
+        touch {output.done}
         """
 
 
@@ -221,7 +229,8 @@ rule process_maple_placements_masked:
     input:
         f"{data_dir}/done_files/4_concat_maple_output.done"
     output:
-        f"{data_dir}/done_files/5_process_maple_placements_masked.done"
+        done = f"{data_dir}/done_files/5_process_maple_placements_masked.done",
+        results_5 = f"{data_dir}/5/processed_placements_results_masked_{param_term}.tsv"
     shell:
         """
         mkdir -p {data_dir}/5
@@ -238,7 +247,7 @@ rule process_maple_placements_masked:
             --het_thr {het_thr} \
             --compress {compress} \
             > {out_err_dir}/5/5_pMSP_m_sm.out 2> {out_err_dir}/5/5_pMSP_m_sm.err
-        touch {output}
+        touch {output.done}
         """
 
 
@@ -247,7 +256,8 @@ rule process_maple_placements_random:
     input:
         f"{data_dir}/done_files/4_concat_maple_output.done"
     output:
-        f"{data_dir}/done_files/5_process_maple_placements_random.done"
+        done = f"{data_dir}/done_files/5_process_maple_placements_random.done",
+        results_5 = f"{data_dir}/5/processed_placements_results_random_{param_term}.tsv"
     shell:
         """
         mkdir -p {data_dir}/5
@@ -264,7 +274,7 @@ rule process_maple_placements_random:
             --het_thr {het_thr} \
             --compress {compress} \
             > {out_err_dir}/5/5_pMSP_r_sm.out 2> {out_err_dir}/5/5_pMSP_r_sm.err
-        touch {output}
+        touch {output.done}
         """
 
 
@@ -273,7 +283,8 @@ rule find_contaminant_candidates_masked:
     input:
         f"{data_dir}/done_files/5_process_maple_placements_masked.done"
     output:
-        f"{data_dir}/done_files/6_find_contaminants_candidates_masked.done"
+        done = f"{data_dir}/done_files/6_find_contaminants_candidates_masked.done",
+        results_6 = f"{data_dir}/6/processed_placements_results_with_contaminants_masked_{param_term}.tsv"
     shell:
         """
         mkdir -p {out_err_dir}/6
@@ -287,7 +298,7 @@ rule find_contaminant_candidates_masked:
             --num_cores {num_cores} \
             --compress {compress} \
             > {out_err_dir}/6/6_fcc_m_sm.out 2> {out_err_dir}/6/6_fcc_m_sm.err
-        touch {output}
+        touch {output.done}
         """
 
 
@@ -296,7 +307,8 @@ rule find_contaminant_candidates_random:
     input:
         f"{data_dir}/done_files/5_process_maple_placements_random.done"
     output:
-        f"{data_dir}/done_files/6_find_contaminants_candidates_random.done"
+        done = f"{data_dir}/done_files/6_find_contaminants_candidates_random.done",
+        results_6 = f"{data_dir}/6/processed_placements_results_with_contaminants_random_{param_term}.tsv"
     shell:
         """
         mkdir -p {out_err_dir}/6
@@ -310,7 +322,7 @@ rule find_contaminant_candidates_random:
             --num_cores {num_cores} \
             --compress {compress} \
             > {out_err_dir}/6/6_fcc_r_sm.out 2> {out_err_dir}/6/6_fcc_r_sm.err
-        touch {output}
+        touch {output.done}
         """
 
 
@@ -319,7 +331,8 @@ rule apply_adapted_eyre_model_masked:
     input:
         f"{data_dir}/done_files/6_find_contaminants_candidates_masked.done"
     output:
-        f"{data_dir}/done_files/7_apply_adapted_eyre_model_masked.done"
+        done = f"{data_dir}/done_files/7_apply_adapted_eyre_model_masked.done",
+        eyre_results = f"{data_dir}/7/eyre_model_masked_output.tsv"
     shell:
         """
         mkdir -p {out_err_dir}/7
@@ -330,7 +343,7 @@ rule apply_adapted_eyre_model_masked:
             --param_term {param_term} \
             --compress {compress} \
             > {out_err_dir}/7/7_aem_m_sm.out 2> {out_err_dir}/7/7_aem_m_sm.err
-        touch {output}
+        touch {output.done}
         """
 
 
@@ -339,7 +352,8 @@ rule apply_adapted_eyre_model_random:
     input:
         f"{data_dir}/done_files/6_find_contaminants_candidates_random.done"
     output:
-        f"{data_dir}/done_files/7_apply_adapted_eyre_model_random.done"
+        done = f"{data_dir}/done_files/7_apply_adapted_eyre_model_random.done",
+        eyre_results = f"{data_dir}/7/eyre_model_random_output.tsv"
     shell:
         """
         mkdir -p {out_err_dir}/7
@@ -350,7 +364,7 @@ rule apply_adapted_eyre_model_random:
             --param_term {param_term} \
             --compress {compress} \
             > {out_err_dir}/7/7_aem_r_sm.out 2> {out_err_dir}/7/7_aem_r_sm.err
-        touch {output}
+        touch {output.done}
         """
 
 
@@ -360,7 +374,9 @@ rule concat_eyre_output:
         f"{data_dir}/done_files/7_apply_adapted_eyre_model_masked.done",
         f"{data_dir}/done_files/7_apply_adapted_eyre_model_random.done"
     output:
-        f"{data_dir}/done_files/8_concat_eyre_output.done"
+        done = f"{data_dir}/done_files/8_concat_eyre_output.done",
+        final_results_masked = f"{data_dir}/8/masked_samples_{param_term}.tsv",
+        final_results_random = f"{data_dir}/8/random_samples_{param_term}.tsv"
     shell:
         """
         mkdir -p {out_err_dir}/8
@@ -372,5 +388,5 @@ rule concat_eyre_output:
             --path_ref_seq {path_ref_seq} \
             --compress {compress} \
             > {out_err_dir}/8/8_ceo_sm.out 2> {out_err_dir}/8/8_ceo_sm.err
-        touch {output}
+        touch {output.done}
         """

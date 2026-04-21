@@ -5,8 +5,9 @@ import lzma
 from tqdm import tqdm
 
 def compress_file(path, level=3, threads=-1):
-    """Compress a file using Zstandard (.zst)."""
+    """Compress a file using chosen library"""
     import zstandard as zstd
+    import gzip as gz
     from pathlib import Path
     path = Path(path)
 
@@ -21,7 +22,7 @@ def compress_file(path, level=3, threads=-1):
             shutil.copyfileobj(f_in, compressor)
             compressor.flush(zstd.FLUSH_FRAME)
 
-    # Optionally remove original file
+    # Remove original file
     path.unlink()
 
     return zst_path
@@ -176,7 +177,7 @@ def generate_sample_list(sample_names, samples_dir):
     # Generate a list of ids to chose samples
     batchs_samples_list = []
 
-    with lzma.open(samples_dir, "rt") as f:
+    with smart_open(samples_dir, "rt") as f:
         # Each line is composed of sample_name and path to qc file
         # Iterate over the lines and get the path, sample_name if the line's index is in chosen_samples
         next(f)  # Skip header line

@@ -159,7 +159,6 @@ def plot_metrics_results(df_concat, data_dir, param_term):
     figs_dir.mkdir(parents=True, exist_ok=True)
     
     fig.write_image(figs_dir / "mixed_selected_metrics.png", scale=2)
-    fig.write_html(figs_dir / "mixed_selected_metrics.html")
 
 if __name__ == "__main__":
     # CONCATENATE RESULTS FROM SCRIPT 6 AND 7, PLOT FIGURES AND OUTPUT FINAL RESULTS
@@ -263,48 +262,8 @@ if __name__ == "__main__":
     plot_metrics_results(df_concat=df_concat,
                          data_dir=data_dir,
                          param_term=param_term)
+
     
-    print(f"Now classifying samples using an Isolation Forest")
-    col= ['sample_name', 'unmasked', 'distance', 'n_masked_cons', 'n_masked',
-       'n_het_sites', 'prop_gen_masked', 'prop_dist_reduced',
-       'unmasked_mutations_to_tree', 'mutations_to_tree',
-       'unmasked_placement', 'unmasked_support', 'placement', 'support',
-       'mutations_masked', 'type', 'dist_diff', 'masking_ratio']
-
-    col_to_keep = ['sample_name', 'type', 'distance', 'n_het_sites', 'prop_gen_masked',
-                   'prop_dist_reduced', 'support', 'dist_diff', 'n_candidates', 'score_1', 'score_2', 'final_score']
-    feature_cols = ['distance', 'n_het_sites', 'prop_gen_masked', 'prop_dist_reduced', 'support',
-                    'dist_diff', 'n_candidates', 'score_1', 'score_2', 'final_score']
-    
-    # Feature cols to dtype np.float32
-    df_concat[feature_cols] = df_concat[feature_cols].astype(np.float32)
-    
-    merged_masked_df[feature_cols] = merged_masked_df[feature_cols].astype(np.float32)
-    merged_random_df[feature_cols] = merged_random_df[feature_cols].astype(np.float32)
-
-    clf = IsolationForest(contamination='auto', random_state=9)
-    clf.fit(merged_masked_df[feature_cols])
-    merged_masked_df['scores'] = -clf.decision_function(merged_masked_df[feature_cols])
-    merged_random_df['scores'] = -clf.decision_function(merged_random_df[feature_cols])
-    
-    # The higher scores correspond to the outliers --> samples that are more different from the random masking
-    # Plot the scores distribution
-    plt.figure(figsize=(8, 4))
-    all_scores = np.concatenate([merged_masked_df['scores'], merged_random_df['scores']])
-    bins = np.linspace(all_scores.min(), all_scores.max(), 30)  # 30 equally spaced bins
-    # Sizes of the two datasets
-    sns.histplot(merged_masked_df['scores'], color='#3B6FB6', label='Masked', bins=bins, kde=True)
-    sns.histplot(merged_random_df['scores'], color='#734595', label='Random', bins=bins, kde=True)
-
-    plt.legend()
-
-    plt.xlabel("Anomaly score")
-    plt.ylabel("Count")
-
-    plt.savefig(figs_dir / "anomaly_scores_histogram.png", dpi=300)
-    
-    print("Distribution of anomaly scores saved")
-
     path_df_masked = f"{data_dir}/8/masked_samples_{param_term}.tsv"
     path_df_random = f"{data_dir}/8/random_samples_{param_term}.tsv"
     merged_masked_df.to_csv(path_df_masked, sep="\t", index=False)

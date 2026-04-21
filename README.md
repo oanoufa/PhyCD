@@ -1,6 +1,6 @@
 # PhyCD: Phylogeny-aided Contamination Detection
 
-PhyCD is a computational pipeline for detecting consensus sequence errors
+PhyCD is a computational approach for detecting consensus sequence errors
 caused by the combination of sample contamination and amplicon dropout in
 SARS-CoV-2 (and potentially other amplicon-sequenced pathogen) genomes.
 
@@ -12,8 +12,8 @@ phylogenetic placement to identify putative contamination events.
 
 Contamination occurs when multiple pathogen genomes from different hosts
 are accidentally mixed within one sequenced sample. When combined with
-amplicon dropout — where mutations at primer binding sites prevent
-amplification of the majority genome — the minority contaminant's reads
+amplicon dropout due to mutations at primer binding sites that prevent
+amplification of the majority genome, the minority contaminant's reads
 can dominate at dropout regions, producing a hybrid consensus sequence
 that resembles recombination and introduces artefactual mutations.
 
@@ -30,8 +30,8 @@ PhyCD addresses this by:
   assessing contamination hypotheses
 
 Applied to nearly 5 million SARS-CoV-2 genomes, PhyCD identified 10,942
-putative contamination events under conservative parameters — twice as
-many as a randomly masked control baseline — removing a total of 64,753
+putative contamination events under conservative parameters, twice as
+many as a randomly masked control baseline. This corresponds to the removal of 64,753 potentially
 artefactual substitutions from phylogenetic placement branch lengths.
 
 ## Pipeline
@@ -47,14 +47,14 @@ The pipeline consists of the following steps:
    coverage (or below 50X) are masked. Three consensus sequences are
    generated per sample:
    - *Dropout unmasked*: no dropout masking applied
-   - *Dropout masked*: positions below rho x median coverage are masked
+   - *Dropout masked*: positions below rho * median coverage are masked
    - *Randomly masked*: same number of positions masked, but shifted
      randomly along the genome (control baseline)
 
 3. **Phylogenetic placement**: All three sequences are placed onto the
-   reference tree using MAPLE. Samples where the dropout-masked sequence
+   reference tree using MAPLE. Samples where the *dropout masked* sequence
    has a placement branch length below 5 and 2 or more substitutions
-   shorter than the unmasked sequence are flagged as putatively
+   shorter than the *dropout unmasked* sequence are flagged as putatively
    contaminated.
 
 4. **Contaminant search**: For each flagged sample, plausible contaminant
@@ -84,7 +84,7 @@ The pipeline consists of the following steps:
 
 ### Quick start
 
-PhyCD can be run end-to-end using the provided `run_phycd.sh` script, which processes all samples in a single run. The provided data is a small example dataset. For larger datasets, the pipeline should be ran on clusters.
+PhyCD can be run end-to-end using the provided `run_phycd.sh` script, which processes all samples in a single run. The provided data is a small example dataset made for testing purposes only. PhyCD needs pandemic-scale data and therefore does not produce meaningful results on this example dataset. For larger datasets, the pipeline should be ran on clusters.
 
     bash run_phycd.sh
 
@@ -116,13 +116,10 @@ PhyCD expects as input:
 
 PhyCD produces:
 
-- A list of flagged putatively contaminated samples with associated
-  metrics (placement branch lengths, distance differences, masking
-  ratios)
-- Dropout-masked consensus sequences for all processed samples
-- For each flagged sample: candidate contaminant genomes, closeness
-  scores, and posterior probabilities of contamination
-- The reference phylogenetic tree built from filtered samples
+- `/PhyCD/pipeline/{parameters}/data/8/masked_samples_{parameters}.tsv`: The tsv file containing the flagged putatively contaminated samples with various metrics, candidate contaminant genomes, posterior probability of contamination, initial and final placements;
+- [MAPLE alignment files](https://github.com/NicolaDM/MAPLE) for the filtered samples used to build the reference tree, the masked, unmasked, and randomly masked sequences for all samples except the filtered ones;
+- `PhyCD/pipeline/{parameters}/data/clean_tree/clean_{parameters}_tree.jsonl`: The reference phylogenetic tree built from the filtered samples
+- `PhyCD/pipeline/{parameters}/data/figs`: various figures summarizing the results.
 
 ## Reproducing the manuscript results
 
@@ -145,9 +142,6 @@ If you use PhyCD in your research, please cite:
 This project is licensed under the GNU General Public License v3.0.
 See the [LICENSE](LICENSE) file for details.
 
-## Contact
+## Funding
 
-- Olivier Anoufa — IBENS / Institut Pasteur
-- Nicola De Maio — EMBL-EBI
-
-For questions or issues, please open a GitHub issue.
+This work was supported by the European Molecular Biology Laboratory - European Bioinformatics Institute (EMBL-EBI) and the French Embassy in London through their internship program with EMBL-EBI.

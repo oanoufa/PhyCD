@@ -321,11 +321,11 @@ if __name__ == "__main__":
     # Generate parent directory if it doesn't exist
     Path(final_clean_tree_path).parent.mkdir(parents=True, exist_ok=True)
     # For each file, generate it if it does not exist
-    if not Path(maple_alignment_unmasked_file_path).exists() and not Path(maple_alignment_unmasked_file_path + '.gz').exists():
+    if not Path(maple_alignment_unmasked_file_path).exists() and not Path(maple_alignment_unmasked_file_path + '.zst').exists():
         build_maple_file(path_ref_seq, maple_alignment_unmasked_file_path)
-    if not Path(maple_alignment_random_file_path).exists() and not Path(maple_alignment_random_file_path + '.gz').exists():
+    if not Path(maple_alignment_random_file_path).exists() and not Path(maple_alignment_random_file_path + '.zst').exists():
         build_maple_file(path_ref_seq, maple_alignment_random_file_path)
-    if not Path(maple_alignment_masked_file_path).exists() and not Path(maple_alignment_masked_file_path + '.gz').exists():
+    if not Path(maple_alignment_masked_file_path).exists() and not Path(maple_alignment_masked_file_path + '.zst').exists():
         build_maple_file(path_ref_seq, maple_alignment_masked_file_path)
     if not Path(final_clean_tree_path).exists(): build_maple_file(path_ref_seq, final_clean_tree_path)
 
