@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from tqdm import tqdm
 import argparse
-from _aux_functions import compress_file, build_seq_from_ref_and_maple, load_dict_from_tsv, smart_open
+from _aux_functions import compress_file, smart_open
 from sklearn.ensemble import IsolationForest
 
 parser = argparse.ArgumentParser(

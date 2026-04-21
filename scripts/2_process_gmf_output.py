@@ -2,7 +2,7 @@ from pathlib import Path
 import pandas as pd
 from tqdm import tqdm
 import shutil
-from _aux_functions import generate_sh_param_file, compress_file, build_maple_entry, build_maple_file, update_params_file, expand_ambiguous_mutation, smart_open, save_pickle_dict
+from _aux_functions import compress_file, build_maple_entry, build_maple_file, expand_ambiguous_mutation, smart_open, save_pickle_dict
 from multiprocessing import Pool, cpu_count
 from functools import partial
 import argparse

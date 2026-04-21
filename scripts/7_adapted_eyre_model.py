@@ -23,7 +23,7 @@ from tqdm import tqdm
 from pathlib import Path
 from time import time
 import argparse
-from _aux_functions import update_params_file, load_pickle_dict, smart_open, compress_file
+from _aux_functions import load_pickle_dict, smart_open, compress_file
 import plotly.figure_factory as ff
 
 ### PARSE ARGUMENTS ###

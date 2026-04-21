@@ -10,7 +10,7 @@ from collections import Counter
 import argparse
 import csv
 import random
-from _aux_functions import update_params_file, expand_ambiguous_mutation, generate_sample_list, parse_maple_file, smart_open, save_pickle_dict, load_pickle_dict
+from _aux_functions import expand_ambiguous_mutation, generate_sample_list, smart_open, save_pickle_dict, load_pickle_dict
 from multiprocessing import Pool
 import os
 from itertools import chain

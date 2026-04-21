@@ -13,6 +13,7 @@ security_side_project/
 .snakemake/
 .venv/
 .vscode/
+.phycd_venvs
 
 # other folders
 pipeline/
@@ -21,8 +22,5 @@ shell_scripts/
 figs/
 data/
 
-# metadata file (too large)
-input_data/viridian_samples.metadata.tsv.zst
-input_data/run2viridian_dir_10000.tsv
-input_data/run2viridian_dir.tsv.xz
-input_data/MAPLE_REF.fasta
+Snakefile_multi
+run_several_pipelines.sh

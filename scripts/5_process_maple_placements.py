@@ -7,7 +7,7 @@
 from pathlib import Path
 from tqdm import tqdm
 import pandas as pd
-from _aux_functions import update_params_file, generate_sample_list, smart_open, compress_file, save_pickle_dict
+from _aux_functions import generate_sample_list, smart_open, compress_file, save_pickle_dict
 import argparse
 import csv
 

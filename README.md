@@ -71,6 +71,8 @@ The pipeline consists of the following steps:
 
     git clone https://github.com/oanoufa/PhyCD.git
     cd PhyCD
+    python -m venv .phycd_env
+    source .phycd_env/bin/activate
     pip install -r pyenv_requirements.txt
 
 ### Dependencies
@@ -82,9 +84,9 @@ The pipeline consists of the following steps:
 
 ### Quick start
 
-PhyCD can be run end-to-end using the provided `run_several_pipelines.sh` script, although it expects a SLURM cluster structure. To run the pipeline on your dataset, you will need to modify the input paths and parameters in the script. The script will execute all steps of the pipeline sequentially, from filtering to contamination assessment.
+PhyCD can be run end-to-end using the provided `run_phycd.sh` script, which processes all samples in a single run. The provided data is a small example dataset. For larger datasets, the pipeline should be ran on clusters.
 
-    bash run_several_pipelines.sh
+    bash run_phycd.sh
 
 ### Parameters
 

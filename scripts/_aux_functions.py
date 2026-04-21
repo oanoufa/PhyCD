@@ -4,51 +4,6 @@ import shutil
 import lzma
 from tqdm import tqdm
 
-def generate_sh_param_file(sh_path):
-    """Generate a sh param file containing the parameters in the python params.py file.
-    """
-    import _params
-    
-    with open(sh_path, "w") as f:
-        for key, value in _params.__dict__.items():
-            if not key.startswith("_") and not callable(value):
-                print(f"Writing {key}={value} to params.sh")
-                f.write(f"{key}={value}\n")
-
-def update_params_file(params_file, updates):
-    """
-    Update or add parameters in a Python params file.
-
-    Args:
-        params_file (str): Path to the .py params file (e.g., "_params.py").
-        updates (dict): A dictionary of {parameter_name: value} pairs.
-                        Values will be written as Python literals.
-    """
-    path = Path(params_file)
-
-    if path.exists():
-        with open(path, "r") as f:
-            lines = f.readlines()
-    else:
-        lines = []
-
-    updated_keys = set()
-
-    for i, line in enumerate(lines):
-        stripped = line.strip()
-        for key, val in updates.items():
-            if stripped.startswith(f"{key} "):  # e.g., "processed_placement = ..."
-                lines[i] = f"{key} = {repr(val)}\n"
-                updated_keys.add(key)
-                break
-
-    for key, val in updates.items():
-        if key not in updated_keys:
-            lines.append(f"{key} = {repr(val)}\n")
-
-    with open(path, "w") as f:
-        f.writelines(lines)
-
 def compress_file(path, level=3, threads=-1):
     """Compress a file using Zstandard (.zst)."""
     import zstandard as zstd
@@ -72,7 +27,8 @@ def compress_file(path, level=3, threads=-1):
     return zst_path
 
 def smart_open(path, mode="rt"):
-    """Open a file automatically handling gzip (.gz) and zstd (.zst)."""
+    """Open a file automatically handling gzip (.gz), zstd (.zst) and lzma (.xz) compressed files based on their extension.
+    """
     from pathlib import Path
 
     path = Path(path)
@@ -80,7 +36,7 @@ def smart_open(path, mode="rt"):
         matches = list(path.parent.glob(path.name + "*"))
         if len(matches) != 1:
             raise FileNotFoundError(
-                f"Expected exactly one file matching {path.name}*, found {len(matches)}"
+                f"Expected exactly one file matching {path}*, found {len(matches)}"
             )
         path = matches[0]
 
@@ -93,6 +49,10 @@ def smart_open(path, mode="rt"):
     if suffix == ".gz":
         import gzip
         return gzip.open(path, mode)
+    # --- LZMA (.xz) ---
+    if suffix == ".xz":
+        import lzma
+        return lzma.open(path, mode)
     # --- Plain file ---
     return open(path, mode)
 
@@ -162,57 +122,6 @@ def build_maple_entry(seq, ref, seq_name):
             entry.append(f"{m[0]}\t{m[1]}\t{m[2]}")
     return "\n".join(entry)
 
-def change_ref_maple(path_mpl, new_ref_seq):
-    """Change the reference sequence in a MAPLE file.
-    Makes all the corresponding changes to the MAPLE entries."""
-    
-    new_mpl_path = path_mpl.replace(".maple", "_NC_045512.2.maple")
-    with open(new_mpl_path, "w") as f2:
-        f2.write(f">REF\n{new_ref_seq}\n")
-        
-    with open(path_mpl, "r") as f:
-        f.readline()  # Skip the first line (reference sequence)
-        former_ref = f.readline().strip()
-        start = False
-        for line in tqdm(f, desc="Processing MAPLE file reference modification", mininterval=30):
-            if line.startswith(">"):
-                if start:
-                    # Save the previous sequence
-                    with open(new_mpl_path, "a") as f2:
-                        maple_entry = build_maple_entry(current_seq, new_ref_seq, seq_name[1:])
-                        f2.write(maple_entry + "\n")
-                        
-                # Start a new sequence
-                start = True
-                current_seq = list(former_ref)  # Start with the former reference sequence
-                seq_name = line.strip()
-            
-            else:
-                if line.startswith("N") or line.startswith("-"):
-                    parts = line.split("\t")
-                    nuc = parts[0]
-                    pos = int(parts[1]) - 1
-                    num = parts[2]
-                    
-                    for i in range(int(num)):
-                        current_seq[pos + i] = nuc
-                    
-                if line.startswith("A") or line.startswith("C") or line.startswith("G") or line.startswith("T"):
-                    parts = line.split("\t")
-                    nuc = parts[0]
-                    pos = int(parts[1]) - 1
-                    current_seq[pos] = nuc
-                    
-            
-        # Save the last sequence
-        if start:
-            with open(new_mpl_path, "a") as f2:
-                maple_entry = build_maple_entry(current_seq, new_ref_seq, seq_name[1:])
-                f2.write(maple_entry + "\n")
-                
-    return new_mpl_path
-
-
 def build_maple_file(path_ref_seq, path_write_file):
     """Takes as input the path to the reference sequence and the path to the file to generate.
     Copies the content of the reference sequence to the file, and output the reference sequence as a list.
@@ -226,51 +135,6 @@ def build_maple_file(path_ref_seq, path_write_file):
         ref_seq = f.readline().strip()
     
     return ref_seq
-
-def parse_maple_file(path_mpl):
-    """Iterate through a MAPLE file and output the reference and a dict that links the entry name to its entry.
-    The dict has the following structure:
-    {
-        "seq_name1": [entry_lines],
-        "seq_name2": [entry_lines],
-        ...
-    }
-
-    Args:
-        path_mpl (str): Path to the MAPLE file.
-        
-    Returns:
-        ref_name (str): Reference sequence name.
-        ref_seq (str): Reference sequence.
-        maple_dict (dict): Dictionary mapping sequence names to their entries.
-    """
-    
-    maple_dict = {}
-    with open(path_mpl, "r") as f:
-        ref_name = f.readline().strip()[1:]  # Skip the '>' character
-        ref_seq = f.readline().strip()
-        
-        current_seq_name = None
-        current_entry = []
-        
-        for line in f:
-            line = line.strip()
-            if line.startswith(">"):
-                # Save the previous entry
-                if current_seq_name is not None:
-                    maple_dict[current_seq_name] = current_entry
-                
-                # Start a new entry
-                current_seq_name = line[1:]  # Skip the '>' character
-                current_entry = []
-            else:
-                current_entry.append(line)
-        
-        # Save the last entry
-        if current_seq_name is not None:
-            maple_dict[current_seq_name] = current_entry
-            
-    return ref_name, ref_seq, maple_dict
 
 def expand_ambiguous_mutation(mut, remove_starting_nt = False):
     """
@@ -327,112 +191,6 @@ def generate_sample_list(sample_names, samples_dir):
                 break
     print(f"Generated sample list of {len(batchs_samples_list)} entries", flush=True)
     return batchs_samples_list
-
-def build_seq_from_ref_and_maple(ref_seq, maple_entry):
-    """Build a sequence from a reference sequence and a MAPLE entry.
-    Args:
-        ref_seq (str): Reference sequence.
-        maple_entry (list of str): MAPLE entry lines.
-    Returns:
-        seq (str): Built sequence in uppercase.
-    """
-    seq_list = list(ref_seq)
-    for line in maple_entry:
-        parts = line.split("\t")
-        if parts[0].lower() == "n" or parts[0] == "-":
-            nuc = parts[0]
-            pos = int(parts[1]) - 1
-            num = int(parts[2])
-            for i in range(num):
-                seq_list[pos + i] = nuc
-        else:
-            nuc = parts[0]
-            pos = int(parts[1]) - 1
-            seq_list[pos] = nuc
-    return "".join(seq_list).upper()
-
-def look_for_read_data(read_name):
-    """Download read data from ENA and save it in a fold
-
-    Args:
-        read_name (str): 'ERR5176732'
-    """
-    import requests
-    import os
-    url = "https://www.ebi.ac.uk/ena/portal/api/search"
-    params = {
-        "result": "read_run",
-        "query": "run_accession=" + read_name,
-        "fields": "fastq_ftp,instrument_platform",
-        "limit": 1
-    }
-
-    response = requests.get(url, params=params)
-    lines = response.text.strip().split("\n")
-
-    header = lines[0].split("\t")
-    values = lines[1].split("\t")
-
-    ftp_urls = values[1]
-    instrument_platform = values[2]
-
-    ftp_urls = ftp_urls.split(";") 
-    target_dir = "/nfs/research/goldman/anoufa/data/samples/" + read_name[:3] + "/" + read_name
-    os.makedirs(target_dir, exist_ok=True)
-
-    for link in ftp_urls:
-        filename = os.path.basename(link)
-        url = "https://" + link
-        out_path = os.path.join(target_dir, filename)
-        if os.path.exists(out_path):
-            print(f"File {filename} already exists at {out_path}, skipping download.")
-            continue
-        with requests.get(url, stream=True) as r:
-            r.raise_for_status()
-            with open(out_path, "wb") as f:
-                shutil.copyfileobj(r.raw, f)
-    
-    return instrument_platform
-
-def write_dict_tsv(d, path, compress):
-    """Write a TSV from a dictionary for better storage.
-    Only works for dict where keys and values don't contain newlines or tabs
-    """
-    with open(path, "w") as f:
-        for key, value in d.items():
-            f.write(f"{key}\t{value}\n")
-    
-    if compress:
-        compress_file(path)
-
-def load_dict_from_tsv(path, compress):
-    """Load a dictionary from a path to a TSV file.
-    The TSV file must have unnamed columns and have exactly two columns, first one are the keys, second one are the values.
-    """
-    import ast
-    from pathlib import Path
-    d = {}
-    path = Path(path)
-    if compress:
-        matches = list(path.parent.glob(path.name + "*"))
-        if len(matches) != 1:
-            raise FileNotFoundError(
-                f"Expected exactly one file matching {path.name}*, found {len(matches)}"
-            )
-        path = matches[0]
-    with smart_open(path, "rt") as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-
-            parts = line.split("\t", 1)  # important: only split once
-            if len(parts) != 2:
-                raise ValueError(f"Malformed line in {path}: {line}")
-
-            key, value = parts
-            d[key] = ast.literal_eval(value)  # ← FIX
-    return d
 
 def save_pickle_dict(d, path, compress, level=3, threads=-1):
     """Save a dict as a pickle file and compress it if compress is True.

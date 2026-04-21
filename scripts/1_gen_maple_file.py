@@ -7,7 +7,7 @@ import lzma
 import argparse
 from pathlib import Path
 import random
-from _aux_functions import generate_sh_param_file, build_maple_entry, build_maple_file, update_params_file, compress_file, smart_open
+from _aux_functions import build_maple_entry, build_maple_file, compress_file, smart_open
 import time
 
 parser = argparse.ArgumentParser(description='Detect potential contaminated areas depending on several thresholds applied on the Viridian samples.')
@@ -64,7 +64,7 @@ def generate_batchs_pairs(n_batch, path_vdn = samples_dir):
     # Generate a list of ids to chose samples
     batchs_samples_list = [[] for _ in range(n_batch)]
 
-    with lzma.open(path_vdn, "rt") as f:
+    with smart_open(path_vdn, "rt") as f:
         # Each line is composed of sample_name and path to qc file
         # Iterate over the lines and get the path, sample_name if the line's index is in chosen_samples
         for i, line in enumerate(f):
