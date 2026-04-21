@@ -120,7 +120,7 @@ PhyCD produces:
 
 - `PhyCD/pipeline/{parameters}/data/8/masked_samples_{parameters}.tsv`: The tsv file containing the flagged putatively contaminated samples with various metrics, candidate contaminant genomes, posterior probability of contamination, initial and final placements;
 - `PhyCD/pipeline/{parameters}/data/2/alignment_files`: [MAPLE](https://github.com/NicolaDM/MAPLE) alignment files for the filtered samples used to build the reference tree, the masked, unmasked, and randomly masked sequences for all samples except the filtered ones;
-- `PhyCD/pipeline/{parameters}/data/clean_tree/clean_{parameters}_tree.jsonl`: The reference phylogenetic tree built from the filtered samples
+- `PhyCD/pipeline/{parameters}/data/clean_tree/clean_{parameters}_tree.jsonl`: The reference phylogenetic tree built from the filtered samples with country and lineage annotations. The tree can be visualized on [Taxonium](https://www.taxonium.org/);
 - `PhyCD/pipeline/{parameters}/data/figs`: various figures summarizing the results.
 
 ## Reproducing the manuscript results
