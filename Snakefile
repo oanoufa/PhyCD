@@ -21,9 +21,9 @@ print(f"  max_dropout_masked: {max_dropout_masked}",  flush=True)
 print(f"  het_thr:            {het_thr}",             flush=True)
 print(f"  max_n_het_sites:    {max_n_het_sites}",     flush=True)
 
-# --- 5_process_sample_placements default parameters ---
-n_diff_mut    = -5 # Default is 2, with 0 every sample will be flagged
-masked_max_dist = 50 # Default is 5
+# --- 5_process_sample_placements parameters ---
+n_diff_mut    = -1 # Default is 2, with 0 every sample will be flagged (set back to 2 for real runs)
+masked_max_dist = 50 # Default is 5 (set back to 5 for real runs)
 masking_ratio = 0 # Now unused but is a threshold on the masking ratio to flag a sample as putatively contaminated
 
 # --- Paths: edit these for your local setup ---

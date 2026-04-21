@@ -82,9 +82,11 @@ The pipeline consists of the following steps:
 
 ## Usage
 
-### Quick start
+### Running the pipeline
 
 PhyCD can be run end-to-end using the provided `run_phycd.sh` script, which processes all samples in a single run. The provided data is a small example dataset made for testing purposes only. PhyCD needs pandemic-scale data and therefore does not produce meaningful results on this example dataset. For larger datasets, the pipeline should be ran on clusters.
+
+Before running the pipeline, the `root_dir` variable in the `Snakefile` should be set to the path to your local copy of the PhyCD repository. Parameters are set for the example pipeline run, but can be modified as needed (see below).
 
     bash run_phycd.sh
 
@@ -117,7 +119,7 @@ PhyCD expects as input:
 PhyCD produces:
 
 - `/PhyCD/pipeline/{parameters}/data/8/masked_samples_{parameters}.tsv`: The tsv file containing the flagged putatively contaminated samples with various metrics, candidate contaminant genomes, posterior probability of contamination, initial and final placements;
-- [MAPLE alignment files](https://github.com/NicolaDM/MAPLE) for the filtered samples used to build the reference tree, the masked, unmasked, and randomly masked sequences for all samples except the filtered ones;
+- `PhyCD/pipeline/{parameters}/data/2/alignment_files`: [MAPLE](https://github.com/NicolaDM/MAPLE) alignment files for the filtered samples used to build the reference tree, the masked, unmasked, and randomly masked sequences for all samples except the filtered ones;
 - `PhyCD/pipeline/{parameters}/data/clean_tree/clean_{parameters}_tree.jsonl`: The reference phylogenetic tree built from the filtered samples
 - `PhyCD/pipeline/{parameters}/data/figs`: various figures summarizing the results.
 
@@ -128,14 +130,6 @@ The results in the manuscript were generated using the
 4,952,451 publicly shared SARS-CoV-2 sequenced samples
 ([Hunt et al., 2026](https://doi.org/10.1038/s41592-025-02947-1)).
 
-
-<!-- ## Citation
-
-If you use PhyCD in your research, please cite:
-
-> Anoufa O, Ly-Trong N, Goldman N, De Maio N. Phylogeny-aided detection
-> of contamination in nearly 5 million SARS-CoV-2 genomes. *In
-> preparation*. 2025. -->
 
 ## License
 
