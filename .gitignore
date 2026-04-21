@@ -23,3 +23,6 @@ data/
 
 # metadata file (too large)
 input_data/viridian_samples.metadata.tsv.zst
+input_data/run2viridian_dir_10000.tsv
+input_data/run2viridian_dir.tsv.xz
+input_data/MAPLE_REF.fasta
