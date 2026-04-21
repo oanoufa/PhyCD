@@ -1,5 +1,151 @@
-## Phylogeny-aided pipeline for inter-sample contamination detection in SARS-CoV-2 sequencing data
-### EMBL-EBI
+# PhyCD: Phylogeny-aided Contamination Detection
+
+PhyCD is a computational pipeline for detecting consensus sequence errors
+caused by the combination of sample contamination and amplicon dropout in
+SARS-CoV-2 (and potentially other amplicon-sequenced pathogen) genomes.
+
+PhyCD masks consensus genome positions associated with suspicious
+sequencing read coverage drops, then leverages pandemic-scale
+phylogenetic placement to identify putative contamination events.
+
+## Overview
+
+Contamination occurs when multiple pathogen genomes from different hosts
+are accidentally mixed within one sequenced sample. When combined with
+amplicon dropout — where mutations at primer binding sites prevent
+amplification of the majority genome — the minority contaminant's reads
+can dominate at dropout regions, producing a hybrid consensus sequence
+that resembles recombination and introduces artefactual mutations.
+
+PhyCD addresses this by:
+
+- Masking genome regions exhibiting suspicious relative drops in
+  sequencing coverage
+- Phylogenetically placing masked and unmasked sequences onto a
+  pandemic-scale reference tree
+- Identifying samples where masking substantially reduces phylogenetic
+  placement distance, indicating that the masked positions likely
+  contained artefactual mutations
+- Searching for plausible contaminant genomes and statistically
+  assessing contamination hypotheses
+
+Applied to nearly 5 million SARS-CoV-2 genomes, PhyCD identified 10,942
+putative contamination events under conservative parameters — twice as
+many as a randomly masked control baseline — removing a total of 64,753
+artefactual substitutions from phylogenetic placement branch lengths.
+
+## Pipeline
+
+The pipeline consists of the following steps:
+
+1. **Filtering**: Samples with few heterozygous sites and no large
+   coverage drops are selected to build a reference phylogenetic tree
+   using [MAPLE](https://github.com/NicolaDM/MAPLE).
+
+2. **Dropout masking**: For each unfiltered sample, genome positions with
+   coverage below a threshold fraction (rho) of the sample median
+   coverage (or below 50X) are masked. Three consensus sequences are
+   generated per sample:
+   - *Dropout unmasked*: no dropout masking applied
+   - *Dropout masked*: positions below rho x median coverage are masked
+   - *Randomly masked*: same number of positions masked, but shifted
+     randomly along the genome (control baseline)
+
+3. **Phylogenetic placement**: All three sequences are placed onto the
+   reference tree using MAPLE. Samples where the dropout-masked sequence
+   has a placement branch length below 5 and 2 or more substitutions
+   shorter than the unmasked sequence are flagged as putatively
+   contaminated.
+
+4. **Contaminant search**: For each flagged sample, plausible contaminant
+   genomes are identified from the filtered dataset based on mutation
+   matching at dropout-masked regions and minor allele matching at
+   heterozygous sites.
+
+5. **Likelihood-based assessment**: A probabilistic model (adapted from
+   [Eyre et al., 2013](https://doi.org/10.1371/journal.pcbi.1003059))
+   statistically evaluates each sample-contaminant pair to estimate a
+   posterior probability of contamination.
+
+## Installation
+
+    git clone https://github.com/oanoufa/PhyCD.git
+    cd PhyCD
+    pip install -r pyenv_requirements.txt
+
+### Dependencies
+
+- Python >= 3.8
+- [MAPLE](https://github.com/NicolaDM/MAPLE) v0.7.5
+
+## Usage
+
+### Quick start
+
+PhyCD can be run end-to-end using the provided `run_several_pipelines.sh` script, although it expects a SLURM cluster structure. To run the pipeline on your dataset, you will need to modify the input paths and parameters in the script. The script will execute all steps of the pipeline sequentially, from filtering to contamination assessment.
+
+    bash run_several_pipelines.sh
+
+### Parameters
+
+| Parameter | Symbol | Default | Description |
+|-----------|--------|---------|-------------|
+| Dropout masking threshold | rho | 0.05 | Fraction of median coverage below which positions are masked |
+| Coverage filter threshold | kappa | 0 | Max positions below rho*M allowed in filtered samples |
+| Heterozygosity threshold | eta | 0.10 | Minor allele proportion above which a site is heterozygous |
+| Heterozygous sites filter | theta | 3 | Max heterozygous sites allowed in filtered samples |
+| Branch length threshold | - | 5 | Max placement branch length for flagged samples |
+| Distance difference threshold | - | 2 | Min reduction in placement branch length to flag a sample |
+
+Lower values of rho (e.g., 5%) offer the highest signal-to-noise ratio
+and masking efficiency. Higher values (e.g., 20%) flag more samples but
+introduce proportionally more false positives. See the manuscript for a
+detailed parameter exploration.
+
+## Input data
+
+PhyCD expects as input:
+
+- **Quality control files** assembled by
+  [Viridian](https://github.com/iqbal-lab-org/viridian)
+- **Reference sequence** of the pathogen (e.g., SARS-CoV-2 reference genome)
+
+## Output
+
+PhyCD produces:
+
+- A list of flagged putatively contaminated samples with associated
+  metrics (placement branch lengths, distance differences, masking
+  ratios)
+- Dropout-masked consensus sequences for all processed samples
+- For each flagged sample: candidate contaminant genomes, closeness
+  scores, and posterior probabilities of contamination
+- The reference phylogenetic tree built from filtered samples
+
+## Reproducing the manuscript results
+
+The results in the manuscript were generated using the
+[Viridian](https://github.com/iqbal-lab-org/viridian) dataset of
+4,952,451 publicly shared SARS-CoV-2 sequenced samples
+([Hunt et al., 2026](https://doi.org/10.1038/s41592-025-02947-1)).
 
 
-Abstract — Contamination is a phenomenon that can occur during genome sequencing, where a contaminant genome gets mixed in a sample with the intended genome to be sequenced. Contamination can lead to incorrect calls in the final consensus of the genome, disrupting analyses of viral evolution and transmission. To address this issue, we implemented a method to detect and mask genome positions whose consensus calls were potentially affected by contamination during the sample sequencing. Our approach combines the analysis of raw genome sequencing data with advanced phylogenetic inference from millions of SARS-CoV-2 genomes.
+<!-- ## Citation
+
+If you use PhyCD in your research, please cite:
+
+> Anoufa O, Ly-Trong N, Goldman N, De Maio N. Phylogeny-aided detection
+> of contamination in nearly 5 million SARS-CoV-2 genomes. *In
+> preparation*. 2025. -->
+
+## License
+
+This project is licensed under the GNU General Public License v3.0.
+See the [LICENSE](LICENSE) file for details.
+
+## Contact
+
+- Olivier Anoufa — IBENS / Institut Pasteur
+- Nicola De Maio — EMBL-EBI
+
+For questions or issues, please open a GitHub issue.
