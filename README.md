@@ -43,11 +43,11 @@ The pipeline consists of the following steps:
    using [MAPLE](https://github.com/NicolaDM/MAPLE).
 
 2. **Dropout masking**: For each unfiltered sample, genome positions with
-   coverage below a threshold fraction (rho) of the sample median
+   coverage below a threshold fraction (ρ) of the sample median
    coverage (or below 50X) are masked. Three consensus sequences are
    generated per sample:
    - *Dropout unmasked*: no dropout masking applied
-   - *Dropout masked*: positions below rho * median coverage are masked
+   - *Dropout masked*: positions below ρ * median coverage are masked
    - *Randomly masked*: same number of positions masked, but shifted
      randomly along the genome (control baseline)
 
@@ -94,14 +94,14 @@ Before running the pipeline, the `root_dir` variable in the `Snakefile` should b
 
 | Parameter | Symbol | Default | Description |
 |-----------|--------|---------|-------------|
-| Dropout masking threshold | rho | 0.05 | Fraction of median coverage below which positions are masked |
-| Coverage filter threshold | kappa | 0 | Max positions below rho*M allowed in filtered samples |
-| Heterozygosity threshold | eta | 0.10 | Minor allele proportion above which a site is heterozygous |
-| Heterozygous sites filter | theta | 3 | Max heterozygous sites allowed in filtered samples |
+| Dropout masking threshold | ρ | 0.05 | Fraction of median coverage below which positions are masked |
+| Coverage filter threshold | κ | 0 | Max positions below ρ*M allowed in filtered samples |
+| Heterozygosity threshold | η | 0.10 | Minor allele proportion above which a site is heterozygous |
+| Heterozygous sites filter | θ | 3 | Max heterozygous sites allowed in filtered samples |
 | Branch length threshold | - | 5 | Max placement branch length for flagged samples |
 | Distance difference threshold | - | 2 | Min reduction in placement branch length to flag a sample |
 
-Lower values of rho (e.g., 5%) offer the highest signal-to-noise ratio
+Lower values of ρ (e.g., 5%) offer the highest signal-to-noise ratio
 and masking efficiency. Higher values (e.g., 20%) flag more samples but
 introduce proportionally more false positives. See the manuscript for a
 detailed parameter exploration.
