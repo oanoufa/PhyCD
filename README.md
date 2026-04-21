@@ -59,7 +59,7 @@ The pipeline consists of the following steps:
 
 4. **Contaminant search**: For each flagged sample, plausible contaminant
    genomes are identified from the filtered dataset based on mutation
-   matching at dropout-masked regions and minor allele matching at
+   matching at *dropout masked* regions and minor allele matching at
    heterozygous sites.
 
 5. **Likelihood-based assessment**: A probabilistic model (adapted from
