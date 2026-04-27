@@ -79,7 +79,7 @@ The pipeline consists of the following steps:
 
 - Python >= 3.8
 - [MAPLE](https://github.com/NicolaDM/MAPLE) v0.7.5
-- [Snakemake](https://snakemake.readthedocs.io/en/stable/) v8.5.2
+- [Snakemake](https://snakemake.github.io/) v8.5.2
 
 ## Usage
 
