@@ -135,7 +135,7 @@ The results in the manuscript were generated using the
 
 A Zenodo repository is publicly available at [Zenodo repository](https://zenodo.org/records/19815950). The repository contains:
 - the reference phylogenetic tree of 785,011 samples;
-- the *dropout masked* alignment augmented with the filtered samples (4,952,451 + reference);
+- the *dropout masked* alignment augmented with the filtered samples (4,952,451 samples + reference);
 - the list of the 10,942 flagged putatively contaminated samples.
 All those files were generated using PhyCD with default parameters (0.05, 0, 0.10, 3).
 
