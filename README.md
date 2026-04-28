@@ -77,7 +77,7 @@ The pipeline consists of the following steps:
 
 ### Dependencies
 
-- Python >= 3.8
+- [Python](https://www.python.org/) >= 3.8
 - [MAPLE](https://github.com/NicolaDM/MAPLE) v0.7.5
 - [Snakemake](https://snakemake.github.io/) v8.5.2
 
