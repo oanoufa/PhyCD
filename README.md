@@ -85,7 +85,9 @@ The pipeline consists of the following steps:
 
 ### Running the pipeline
 
-PhyCD can be run end-to-end using the provided `run_phycd.sh` script, which processes all samples in a single run. The provided data is a small example dataset made for testing purposes only. PhyCD needs pandemic-scale data and therefore does not produce meaningful results on this example dataset. For larger datasets, the pipeline should be ran on clusters.
+PhyCD can be run end-to-end using the provided `run_phycd.sh` script, which processes all samples in a single run. The provided data is a small example dataset made for testing purposes only. It is composed of 300 samples randomly drawn within lineage B.1.1.7.
+
+PhyCD needs pandemic-scale data and therefore does not produce meaningful results on this example dataset. For larger datasets, the pipeline should be ran on clusters.
 
 Before running the pipeline, the `root_dir` variable in the `Snakefile` should be set to the path to your local copy of the PhyCD repository. Parameters are set for the example pipeline run, but can be modified as needed (see below).
 

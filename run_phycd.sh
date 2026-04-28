@@ -3,7 +3,7 @@
 # Default parameters
 depth_thr=0.05
 max_dropout_masked=0
-het_thr=0.1
+het_thr=0.10
 max_n_het_sites=3
 
 path_to_snakefile="./Snakefile"
